@@ -1,0 +1,7 @@
+{
+  "name": "jojo-61329859",
+  "description": "Studio IDE avec émulateur Android 14 Pixel 8 Pro et intelligence artificielle Gemini",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

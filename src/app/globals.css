@@ -1,0 +1,102 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 260 100% 11%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 190 100% 50%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 260 100% 50%;
+    --radius: 0.75rem;
+  }
+}
+ 
+@layer base {
+  * {
+    border-color: hsl(var(--border) / 0.5);
+  }
+  body {
+    background-color: #05070a;
+    color: hsl(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+    background-image: radial-gradient(circle at 50% 50%, rgba(138, 43, 226, 0.08) 0%, transparent 60%),
+                      radial-gradient(circle at 0% 0%, rgba(0, 242, 255, 0.05) 0%, transparent 40%);
+    background-attachment: fixed;
+  }
+}
+
+/* Bordure Fluide Animée (Style Google/Elite) */
+.premium-border {
+  position: relative;
+}
+
+.premium-border::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #4b0082, #8a2be2, #00f2ff, #8a2be2, #4b0082, transparent);
+  background-size: 200% 100%;
+  animation: fluid-glow 6s linear infinite;
+  opacity: 0.8;
+}
+
+@keyframes fluid-glow {
+  0% { background-position: 200% 0%; }
+  100% { background-position: -200% 0%; }
+}
+
+/* Effet Verre */
+.glass-panel {
+  background: rgba(12, 13, 18, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(138, 43, 226, 0.15);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+/* Spinner avec Logo Central */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.owl-spinner {
+  animation: spin-slow 2s linear infinite;
+}
+
+/* Code Editor Styling */
+.editor-container {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.code-keyword { color: #c678dd; font-weight: bold; }
+.code-string { color: #98c379; }
+.code-function { color: #61afef; }
+.code-comment { color: #5c6370; font-style: italic; }
+.code-number { color: #d19a66; }
+.code-tag { color: #e06c75; }
+.code-attr { color: #d19a66; }
+.code-bool { color: #d19a66; }
+.code-type { color: #56b6c2; }
