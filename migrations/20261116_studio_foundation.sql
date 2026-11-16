@@ -16,9 +16,16 @@ CREATE TABLE IF NOT EXISTS jojo_ai_generation_runs(id UUID PRIMARY KEY,user_id I
 ALTER TABLE jojo_ai_project_files ADD COLUMN IF NOT EXISTS file_mode TEXT NOT NULL DEFAULT '100644';
 ALTER TABLE project_pending_actions ADD COLUMN IF NOT EXISTS base_hash TEXT;
 CREATE TABLE IF NOT EXISTS jojo_ai_openai_accounts(user_id INTEGER PRIMARY KEY REFERENCES dev_portal_users(id) ON DELETE CASCADE,key_ciphertext TEXT NOT NULL,updated_at TIMESTAMPTZ NOT NULL DEFAULT now());
-CREATE TABLE IF NOT EXISTS jojo_ai_daily_credits(user_id INTEGER NOT NULL REFERENCES dev_portal_users(id) ON DELETE CASCADE,credit_day DATE NOT NULL,remaining INTEGER NOT NULL DEFAULT 5 CHECK(remaining BETWEEN 0 AND 5),PRIMARY KEY(user_id,credit_day));
+CREATE TABLE IF NOT EXISTS jojo_ai_daily_credits(user_id INTEGER NOT NULL REFERENCES dev_portal_users(id) ON DELETE CASCADE,credit_day DATE NOT NULL,remaining INTEGER NOT NULL DEFAULT 100 CHECK(remaining BETWEEN 0 AND 100),PRIMARY KEY(user_id,credit_day));
 ALTER TABLE jojo_ai_generation_runs ADD COLUMN IF NOT EXISTS credit_source TEXT NOT NULL DEFAULT 'paid';
 ALTER TABLE jojo_ai_generation_runs ADD COLUMN IF NOT EXISTS credit_day DATE;
 ALTER TABLE jojo_ai_generation_runs ADD COLUMN IF NOT EXISTS progress JSONB;
 ALTER TABLE project_pending_actions ADD COLUMN IF NOT EXISTS file_encoding TEXT NOT NULL DEFAULT 'utf8';
+-- Upgrade existing five-credit grants exactly once, preserving already consumed credits.
+ALTER TABLE jojo_ai_daily_credits ADD COLUMN IF NOT EXISTS grant_limit INTEGER NOT NULL DEFAULT 5;
+ALTER TABLE jojo_ai_daily_credits DROP CONSTRAINT IF EXISTS jojo_ai_daily_credits_remaining_check;
+UPDATE jojo_ai_daily_credits SET remaining=remaining+(100-grant_limit),grant_limit=100 WHERE grant_limit<100;
+ALTER TABLE jojo_ai_daily_credits ALTER COLUMN remaining SET DEFAULT 100;
+ALTER TABLE jojo_ai_daily_credits ALTER COLUMN grant_limit SET DEFAULT 100;
+ALTER TABLE jojo_ai_daily_credits ADD CONSTRAINT jojo_ai_daily_credits_remaining_check CHECK(remaining BETWEEN 0 AND 100);
 COMMIT;
