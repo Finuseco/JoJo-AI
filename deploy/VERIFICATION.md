@@ -18,3 +18,10 @@
 - Nginx successfully validated the 8095 upstream configuration with `nginx -t` in an isolated nginx:alpine container.
 - Authenticated studio routes actually imported the public octocat/Hello-World repository and confirmed an unchanged pull. No remote repository was modified. Local test networking required Node's HTTPS proxy support.
 - PostgreSQL also verified transactional batch approval: one stale file prevented all changes; a valid batch preserved its binary PNG exactly.
+
+## Terminal / WebView update
+
+- Eleven contract tests include npm command/flag injection rejection and public preview reference filtering/relative resource resolution.
+- Actual Docker tests verify custom npm scripts, logs received before completion, installing a real registry package with manifest proposals, cross-user cancellation rejection and actual cancellation.
+- Authenticated Next.js + PostgreSQL + worker browser tests at 360px/1440px cover every studio menu, WebView CSS rendering, explicit public activation and anonymous viewing, private ZIP rejection and collaborator execution denial.
+- An actual package installation was proposed exactly once, approved through the UI and saved in the project; rebuilding/publication made the stable preview API resolve the published site's URL. Public DNS/TLS transport was not asserted by the local test.
