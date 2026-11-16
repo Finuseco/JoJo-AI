@@ -1,5 +1,6 @@
 'use server';
 
+import {generationBalance} from '../generation-ledger';
 import {createHash} from 'node:crypto';
 import { db } from '../db';
 import {provisionProjectDatabase,queryProjectDatabase} from '../project-databases';
@@ -84,7 +85,7 @@ export async function createJojoAiProject(data: { name: string, description: str
         const session = await getJojoAiSession();
         if (!session.success || !session.user) throw new Error("Authentification Elite requise.");
 
-        if(typeof data.name!=='string'||!data.name.trim()||data.name.length>120||data.description.length>5000)throw new Error('Nom ou description invalide.');
+        if(typeof data.name!=='string'||!data.name.trim()||data.name.length>120||typeof data.description!=='string'||data.description.length>5000||!['empty','android','react','react-native','web','music','video','fintech','ecommerce'].includes(data.template))throw new Error('Nom ou description invalide.');
         await connection.query('BEGIN');
         await connection.query('SELECT id FROM dev_portal_users WHERE id=$1 FOR UPDATE',[session.user.id]);
         if(Number((await connection.query('SELECT COUNT(*)::int AS count FROM jojo_ai_projects WHERE dev_portal_user_id=$1',[session.user.id])).rows[0].count)>=50)throw new Error('Limite de 50 projets atteinte.');
@@ -160,37 +161,25 @@ export async function getPendingActions(projectId: number) {
     }
 }
 
-export async function approvePendingAction(actionId: number) {
-    const connection = await db.getConnection();
-    try {
-        await connection.query('BEGIN');
-        const { rows } = await connection.query('SELECT * FROM project_pending_actions WHERE id = $1 FOR UPDATE', [actionId]);
-        if (rows.length === 0) throw new Error("Action introuvable.");
-        const action = rows[0];
-        await requireProject(Number(action.project_id));
-        await checkFileQuota(connection,Number(action.project_id),action.file_path,action.content);
-        const current=(await connection.query('SELECT file_content FROM jojo_ai_project_files WHERE project_id=$1 AND file_path=$2',[action.project_id,action.file_path])).rows[0];
-        const currentHash=current?createHash('sha256').update(current.file_content).digest('hex'):'absent';
-        if(!action.base_hash||currentHash!==action.base_hash)throw Error('Le fichier a changé depuis la proposition. Rejetez-la puis demandez une nouvelle génération.');
-        if(action.status !== 'pending')throw new Error('Action déjà traitée.');
-        editablePath(action.file_path);
-        if(Buffer.byteLength(action.content)>FILE_LIMIT)throw new Error('Fichier trop volumineux.');
-        await connection.query(
-            `INSERT INTO jojo_ai_project_files (project_id, file_path, file_content) VALUES ($1, $2, $3) ON CONFLICT (project_id, file_path) DO UPDATE SET file_content = EXCLUDED.file_content,file_encoding='utf8'`,
-            [action.project_id, action.file_path, action.content]
-        );
-        await connection.query("UPDATE project_pending_actions SET status = 'approved' WHERE id = $1", [actionId]);
-        await connection.query('UPDATE jojo_ai_projects SET updated_at = NOW() WHERE id = $1', [action.project_id]);
-        await connection.query('COMMIT');
-        return { success: true };
-    } catch (e: any) {
-        console.error('approvePendingAction error:', e);
-        if (connection) await connection.query('ROLLBACK');
-        return { success: false, error: e.message };
-    } finally {
-        connection.release();
-    }
+async function applyProposal(connection:any,action:any){
+ await checkFileQuota(connection,Number(action.project_id),action.file_path,action.content,action.file_encoding||'utf8');
+ const current=(await connection.query('SELECT file_content FROM jojo_ai_project_files WHERE project_id=$1 AND file_path=$2',[action.project_id,action.file_path])).rows[0];
+ const currentHash=current?createHash('sha256').update(current.file_content).digest('hex'):'absent';
+ if(!action.base_hash||currentHash!==action.base_hash)throw Error('Un fichier a changé depuis la proposition. Rejetez-la puis demandez une nouvelle génération.');
+ if(action.status!=='pending')throw Error('Action déjà traitée.');editablePath(action.file_path);
+ const encoding=action.file_encoding||'utf8';if(!['utf8','base64'].includes(encoding)||Buffer.byteLength(action.content,encoding==='base64'?'base64':'utf8')>FILE_LIMIT)throw Error('Fichier trop volumineux ou encodage invalide.');
+ await connection.query(`INSERT INTO jojo_ai_project_files(project_id,file_path,file_content,file_encoding) VALUES($1,$2,$3,$4) ON CONFLICT(project_id,file_path) DO UPDATE SET file_content=EXCLUDED.file_content,file_encoding=EXCLUDED.file_encoding`,[action.project_id,action.file_path,action.content,encoding]);
+ await connection.query("UPDATE project_pending_actions SET status='approved' WHERE id=$1",[action.id]);
+ await connection.query('UPDATE jojo_ai_projects SET updated_at=now() WHERE id=$1',[action.project_id]);
 }
+export async function approvePendingAction(actionId:number){let c;try{
+ c=await db.getConnection();await c.query('BEGIN');const action=(await c.query('SELECT * FROM project_pending_actions WHERE id=$1 FOR UPDATE',[actionId])).rows[0];if(!action)throw Error('Action introuvable.');await requireProject(Number(action.project_id));await applyProposal(c,action);await c.query('COMMIT');return {success:true};
+}catch(e:any){await c?.query('ROLLBACK');return {success:false,error:e.message};}finally{c?.release();}}
+export async function approveAllPendingActions(projectId:number){let c;try{
+ await requireProject(projectId);c=await db.getConnection();await c.query('BEGIN');
+ const actions=(await c.query("SELECT * FROM project_pending_actions WHERE project_id=$1 AND status='pending' ORDER BY id FOR UPDATE",[projectId])).rows;
+ for(const action of actions)await applyProposal(c,action);await c.query('COMMIT');return {success:true,count:actions.length};
+}catch(e:any){await c?.query('ROLLBACK');return {success:false,error:e.message};}finally{c?.release();}}
 
 export async function rejectPendingAction(actionId: number) {
     try { const found=await db.query('SELECT project_id FROM project_pending_actions WHERE id=$1',[actionId]);if(!found.rows[0])throw new Error('Action introuvable.');await requireProject(Number(found.rows[0].project_id));
@@ -207,8 +196,7 @@ export async function getCredits() {
     try {
         const session = await getJojoAiSession();
         if (!session.success || !session.user) return { success: false, credits: 0 };
-        const { rows } = await db.query('SELECT generation_credits FROM jojo_ai_credits WHERE dev_portal_user_id = $1', [session.user.id]);
-        return { success: true, credits: rows[0] ? parseFloat(rows[0].generation_credits) : 0 };
+        const balance=await generationBalance(session.user.id);return {success:true,credits:balance.total,daily:balance.daily,extra:balance.extra};
     } catch (e) {
         console.error('getCredits error:', e);
         return { success: false, credits: 0 };

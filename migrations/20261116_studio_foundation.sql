@@ -15,4 +15,10 @@ CREATE TABLE IF NOT EXISTS jojo_ai_generation_runs(id UUID PRIMARY KEY,user_id I
 
 ALTER TABLE jojo_ai_project_files ADD COLUMN IF NOT EXISTS file_mode TEXT NOT NULL DEFAULT '100644';
 ALTER TABLE project_pending_actions ADD COLUMN IF NOT EXISTS base_hash TEXT;
+CREATE TABLE IF NOT EXISTS jojo_ai_openai_accounts(user_id INTEGER PRIMARY KEY REFERENCES dev_portal_users(id) ON DELETE CASCADE,key_ciphertext TEXT NOT NULL,updated_at TIMESTAMPTZ NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS jojo_ai_daily_credits(user_id INTEGER NOT NULL REFERENCES dev_portal_users(id) ON DELETE CASCADE,credit_day DATE NOT NULL,remaining INTEGER NOT NULL DEFAULT 5 CHECK(remaining BETWEEN 0 AND 5),PRIMARY KEY(user_id,credit_day));
+ALTER TABLE jojo_ai_generation_runs ADD COLUMN IF NOT EXISTS credit_source TEXT NOT NULL DEFAULT 'paid';
+ALTER TABLE jojo_ai_generation_runs ADD COLUMN IF NOT EXISTS credit_day DATE;
+ALTER TABLE jojo_ai_generation_runs ADD COLUMN IF NOT EXISTS progress JSONB;
+ALTER TABLE project_pending_actions ADD COLUMN IF NOT EXISTS file_encoding TEXT NOT NULL DEFAULT 'utf8';
 COMMIT;

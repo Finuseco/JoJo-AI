@@ -1,0 +1,16 @@
+# Inside your existing HTTPS server block. Keep Next.js on loopback port 8095.
+# Public ports are 80 (HTTPS redirect) and 443 (TLS), not 8095.
+location / {
+    proxy_pass http://127.0.0.1:8095;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_read_timeout 300;
+    proxy_send_timeout 300;
+    client_max_body_size 30m;
+    add_header Referrer-Policy no-referrer always;
+}
+# Keep /android/ proxy from android-nginx.conf.example as a separate location.
+# Configure TLS with your existing certificate manager. Never log login query tokens.

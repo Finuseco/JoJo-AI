@@ -14,6 +14,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import {getAiProviders} from '@/lib/actions/ai.actions';
+import type {AiProvider} from '@/lib/ai-providers';
 import { buyChatCredits, requestTransactionOtp } from '@/lib/actions/billing.actions';
 import { useToast } from '@/hooks/use-toast';
 import type { DevPortalUser } from '@/lib/types';
@@ -23,7 +25,7 @@ import Image from 'next/image';
 interface AiChatPanelProps {
     projectId: number;
     messages: any[];
-    onSendMessage: (text: string, attachments?: any[]) => void;
+    onSendMessage: (text: string, attachments?: any[], provider?:AiProvider) => void;
     isLoading: boolean;
     currentCredits: number;
     onRefresh: () => void;
@@ -73,6 +75,9 @@ export const AiChatPanel: FC<AiChatPanelProps> = ({
     projectId, messages, onSendMessage, isLoading, currentCredits, onRefresh, user, onInjectCode 
 }) => {
     const { toast } = useToast();
+    const [providers,setProviders]=useState<{id:AiProvider;label:string;configured:boolean;model:string|null}[]>([]);
+    const [provider,setProvider]=useState<AiProvider>('codex');
+    useEffect(()=>{getAiProviders().then(r=>{setProviders(r.providers);setProvider('codex');});},[]);
     const [input, setInput] = useState('');
     const [attachments, setAttachments] = useState<any[]>([]);
     const [isBillingOpen, setIsBillingOpen] = useState(false);
@@ -107,7 +112,7 @@ export const AiChatPanel: FC<AiChatPanelProps> = ({
         if (e) e.preventDefault();
         const messageToSend = customText || input;
         if ((messageToSend.trim() || attachments.length > 0) && !isLoading) {
-            onSendMessage(messageToSend, attachments);
+            onSendMessage(messageToSend, attachments,provider);
             if (!customText) setInput('');
             setAttachments([]);
         }
@@ -193,6 +198,7 @@ export const AiChatPanel: FC<AiChatPanelProps> = ({
                 </div>
             </div>
 
+            <fieldset className="shrink-0 space-y-2 border-b border-white/10 px-4 py-3"><legend className="sr-only">Moteur de développement</legend><div className="flex flex-wrap gap-2">{providers.map(p=><label key={p.id} className={cn('flex items-center gap-2 rounded-lg border px-3 py-2 text-xs',provider===p.id?'border-violet-500 bg-violet-500/15':'border-white/10',!p.configured&&'opacity-60')}><input type="radio" name={`ai-engine-${projectId}`} value={p.id} checked={provider===p.id} disabled={isLoading||!p.configured} onChange={()=>setProvider(p.id)}/>{p.label}{!p.configured?' · non configuré':''}</label>)}</div><p className="text-[11px] text-zinc-400">Propositions de code à valider. Les commandes et compilations passent par Exécution, pas par le moteur IA.</p></fieldset>
             {/* Barre de Progression de Codage */}
             <AnimatePresence>
                 {isLoading && (
@@ -204,7 +210,7 @@ export const AiChatPanel: FC<AiChatPanelProps> = ({
                     >
                         <div className="flex justify-between items-center mb-1 px-1">
                             <span className="text-[8px] font-black text-cyan-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                                <Terminal className="h-3 w-3" /> JOJO tape au clavier et code en direct...
+                                <Terminal className="h-3 w-3" /> Préparation des propositions de code…
                             </span>
                             <span className="text-[8px] font-mono text-cyan-400">En cours</span>
                         </div>

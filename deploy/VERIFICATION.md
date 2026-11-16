@@ -7,3 +7,14 @@
 - The running Next.js app denied private ZIP access to anonymous and foreign users; its owner downloaded a valid ZIP.
 - Chromium opened the authenticated studio at 360px and 1440px without browser exceptions or horizontal document overflow.
 - Android boot, GitHub OAuth/push, model generation and public-domain TLS were not exercised live: they require operator configuration; Android additionally needs /dev/kvm, unavailable here.
+
+
+## OpenAI-only / 8095 update
+
+- Nine contract tests cover the previous archive/security contracts, conservative Git three-way merges, OpenAI-only selection, bounded Responses requests/streams, incomplete-stream rejection and transparent PNG trimming.
+- The daily ledger was tested on actual PostgreSQL: five tasks exhaust the daily grant; duplicate concurrent request IDs charge once; repeated refunds restore once; same-day reconnect cannot refill; personal API-key tasks do not use shared credits.
+- The studio was started at 127.0.0.1:8095. Chromium checked the new OpenAI/tools screen at 360px and 1440px, encrypted personal-key save/delete and metadata without the key.
+- No paid OpenAI code/image call or live GitHub OAuth/push was performed. Provider/model credentials remain deployment requirements. KVM is still unavailable here, so Android boot is not claimed.
+- Nginx successfully validated the 8095 upstream configuration with `nginx -t` in an isolated nginx:alpine container.
+- Authenticated studio routes actually imported the public octocat/Hello-World repository and confirmed an unchanged pull. No remote repository was modified. Local test networking required Node's HTTPS proxy support.
+- PostgreSQL also verified transactional batch approval: one stale file prevented all changes; a valid batch preserved its binary PNG exactly.
