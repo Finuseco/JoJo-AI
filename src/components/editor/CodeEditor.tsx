@@ -49,22 +49,10 @@ export const CodeEditor: FC<CodeEditorProps> = ({ content, onChange, filePath, o
         }
     };
 
-    const highlightCode = (code: string) => {
-        if (!code) return '';
-        return code
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/\b(const|let|var|function|export|default|return|import|from|async|await|if|else|for|while|class|interface|type|public|private|protected|extends|implements)\b/g, '<span class="code-keyword">$1</span>')
-            .replace(/'([^']*)'/g, '<span class="code-string">\'$1\'</span>')
-            .replace(/"([^"]*)"/g, '<span class="code-string">"$1"</span>')
-            .replace(/`([^`]*)`/g, '<span class="code-string">`$1`</span>')
-            .replace(/\b(true|false|null|undefined)\b/g, '<span class="code-bool">$1</span>')
-            .replace(/\b(\d+)\b/g, '<span class="code-number">$1</span>')
-            .replace(/(\/\/.*)/g, '<span class="code-comment">$1</span>')
-            .replace(/&lt;([a-zA-Z0-9]+)/g, '&lt;<span class="code-tag">$1</span>')
-            .replace(/([a-zA-Z0-9]+)=/g, '<span class="code-attr">$1</span>=');
-    };
+    const highlightCode = (code: string) => code.split(/(\/\/[^\n]*|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\b(?:const|let|var|function|export|default|return|import|from|async|await|if|else|for|while|class|interface|type|public|private|protected|extends|implements|true|false|null|undefined|[0-9]+)\b)/g).map((token,index) => {
+        const cls=token.startsWith('//')?'code-comment':/^["']/.test(token)?'code-string':/^[0-9]+$/.test(token)?'code-number':/^(const|let|var|function|export|default|return|import|from|async|await|if|else|for|while|class|interface|type|public|private|protected|extends|implements)$/.test(token)?'code-keyword':undefined;
+        return <span key={index} className={cls}>{token}</span>;
+    });
 
     return (
         <div className="flex-1 flex h-full overflow-hidden editor-container bg-[#111114]">
@@ -81,8 +69,7 @@ export const CodeEditor: FC<CodeEditorProps> = ({ content, onChange, filePath, o
                 <pre 
                     ref={preRef}
                     className="absolute inset-0 p-5 m-0 font-mono text-[13px] leading-normal pointer-events-none overflow-hidden whitespace-pre scrollbar-hide select-none h-full"
-                    dangerouslySetInnerHTML={{ __html: highlightCode(content) + '\n' }}
-                />
+                >{highlightCode(content)}{'\n'}</pre>
                 <textarea
                     ref={textareaRef}
                     value={content}

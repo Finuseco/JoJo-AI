@@ -1,0 +1,11 @@
+{
+    on_demand_tls {
+        ask http://127.0.0.1:8791/internal/tls-allow
+    }
+}
+https:// {
+    tls {
+        on_demand
+    }
+    reverse_proxy 127.0.0.1:8790
+}

@@ -80,7 +80,7 @@ export const AiChatPanel: FC<AiChatPanelProps> = ({
     const [dollarAmount, setAmount] = useState('1.90');
     const [copiedId, setCopiedId] = useState<number | null>(null);
     const [selectedPollVotes, setSelectedPollVotes] = useState<Record<number, string>>({});
-    const [progress, setProgress] = useState(0);
+
     
     const chatEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -88,21 +88,6 @@ export const AiChatPanel: FC<AiChatPanelProps> = ({
     useEffect(() => { 
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); 
     }, [messages, isLoading]);
-
-    // Barre de progression pendant la réflexion de l'IA
-    useEffect(() => {
-        let interval: any;
-        if (isLoading) {
-            setProgress(0);
-            interval = setInterval(() => {
-                setProgress(prev => (prev >= 95 ? 95 : prev + (100 - prev) * 0.1));
-            }, 300);
-        } else {
-            setProgress(100);
-            setTimeout(() => setProgress(0), 500);
-        }
-        return () => clearInterval(interval);
-    }, [isLoading]);
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -195,7 +180,7 @@ export const AiChatPanel: FC<AiChatPanelProps> = ({
             {/* Header JOJO AI STUDIO */}
             <div className="h-11 px-5 flex items-center justify-between border-b border-white/10 bg-primary/20 premium-border shrink-0">
                 <div className="flex items-center text-cyan-400 font-black text-[9px] tracking-widest uppercase">
-                    <Sparkles className="h-3.5 w-3.5 mr-2 animate-pulse text-cyan-400" /> GEMINI 3.8 FLASH • LIVE
+                    <Sparkles className="h-3.5 w-3.5 mr-2 animate-pulse text-cyan-400" /> ASSISTANT DE DÉVELOPPEMENT
                 </div>
                 <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1.5 bg-cyan-500/10 text-cyan-400 px-2.5 py-1 rounded-lg border border-cyan-500/20">
@@ -221,13 +206,13 @@ export const AiChatPanel: FC<AiChatPanelProps> = ({
                             <span className="text-[8px] font-black text-cyan-400 uppercase tracking-[0.2em] flex items-center gap-2">
                                 <Terminal className="h-3 w-3" /> JOJO tape au clavier et code en direct...
                             </span>
-                            <span className="text-[8px] font-mono text-cyan-400">{Math.floor(progress)}%</span>
+                            <span className="text-[8px] font-mono text-cyan-400">En cours</span>
                         </div>
                         <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
                             <motion.div 
                                 className="h-full bg-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.5)]"
                                 initial={{ width: 0 }}
-                                animate={{ width: `${progress}%` }}
+                                animate={{ opacity: [0.3, 1, 0.3], width: "100%" }}
                                 transition={{ type: 'spring', stiffness: 50 }}
                             />
                         </div>
@@ -241,7 +226,7 @@ export const AiChatPanel: FC<AiChatPanelProps> = ({
                     <div className="py-16 flex flex-col items-center justify-center opacity-30 text-center space-y-3">
                         <BrainCircuit className="h-14 w-14 text-cyan-400" />
                         <p className="text-[10px] font-black uppercase tracking-[0.4em] max-w-[220px]">
-                            Moteur Gemini Prêt • Tapez vos requêtes Android & Web
+                            Assistant de développement · Proposez votre prochaine modification
                         </p>
                     </div>
                 )}
@@ -260,7 +245,7 @@ export const AiChatPanel: FC<AiChatPanelProps> = ({
                                     )}
                                 </div>
                                 <span className="text-[8px] font-black uppercase tracking-widest opacity-40">
-                                    {isModel ? 'JOJO AI STUDIO (GEMINI 3.8)' : user.manager_name}
+                                    {isModel ? 'JOJO AI STUDIO' : user.manager_name}
                                 </span>
                             </div>
                             
@@ -297,13 +282,13 @@ export const AiChatPanel: FC<AiChatPanelProps> = ({
                     onClick={() => handleSubmit(undefined, "Conçois un écran Android 14 interactif avec solde et cartes pour mon application.")}
                     className="whitespace-nowrap px-2.5 py-1 rounded-xl bg-white/5 hover:bg-cyan-500/20 text-gray-400 hover:text-cyan-400 text-[9px] font-bold border border-white/5 transition-all"
                 >
-                    📱 Écran Android 14
+                    Écran Android
                 </button>
                 <button 
                     onClick={() => handleSubmit(undefined, "Génère un logo vectoriel SVG haute définition pour mon application.")}
                     className="whitespace-nowrap px-2.5 py-1 rounded-xl bg-white/5 hover:bg-cyan-500/20 text-gray-400 hover:text-cyan-400 text-[9px] font-bold border border-white/5 transition-all"
                 >
-                    🎨 Logo Vectoriel SVG
+                    Logo vectoriel SVG
                 </button>
                 <button 
                     onClick={() => handleSubmit(undefined, "Analyse et audite toute l'application et propose les meilleures optimisations.")}
@@ -359,7 +344,7 @@ export const AiChatPanel: FC<AiChatPanelProps> = ({
                     </div>
                 </form>
                 <p className="text-[7px] font-black text-gray-500 text-center uppercase tracking-widest">
-                    JOJO AI STUDIO • Moteur Gemini 3.8 Flash & Émulateur Android 14 Connecté
+                    JOJO AI · Modifications à valider · Exécution dans les services connectés
                 </p>
             </div>
 
