@@ -1,7 +1,7 @@
 'use client';
 import {useCallback,useEffect,useState} from 'react';
 import {Database,Plus,Play,Loader2} from 'lucide-react';
-import {getProjectDatabases,provisionNewDatabase,runSqlQuery} from '@/lib/actions/dev-portal.actions';
+import {getProjectDatabases,provisionNewDatabase,runSqlQuery} from '@/lib/client/studio-actions';
 import {Button} from '@/components/ui/button';import {Input} from '@/components/ui/input';
 export function DatabaseManager({projectId}:{projectId:number}){
  const [dbs,setDbs]=useState<any[]>([]),[name,setName]=useState(''),[password,setPassword]=useState(''),[sql,setSql]=useState('SELECT current_database();'),[selected,setSelected]=useState(0),[busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[result,setResult]=useState<any>(null);

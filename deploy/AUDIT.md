@@ -2,11 +2,11 @@
 
 ## Implemented and testable
 
-- Authenticated, tenant-scoped API v1 separated from the web; public endpoint ai.cashpay-all.com with private 8095/8096 listeners.
+- Authenticated, tenant-scoped API v1 and web in ONE Next.js application; public endpoint ai.cashpay-all.com and a single private application listener on 8095.
 - Actual PostgreSQL workspace files; create/save/rename/delete with revisions and HTTP 409 conflicts. No default demo workspace.
 - Monaco editing/diff, local workers, resizable desktop panes, mobile drawer, searchable files/commands, save/close controls.
 - OpenAI Responses streaming of actual proposed text/file snippets, persisted completed chat, reviewed/bulk application and real daily-credit ledger.
-- Existing GitHub imports/pull/push, ZIP export, npm worker and WebView contracts preserved in the separate API.
+- Existing GitHub imports/pull/push, ZIP export, npm worker and WebView contracts preserved in the unified application API.
 - Actual Electron Windows portable packaging, sandboxed renderer and explicit native menu bridge. No .NET/Java runtime is needed for this client shell.
 
 ## Still required / not claimed

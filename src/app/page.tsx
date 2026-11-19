@@ -4,7 +4,7 @@ import {useSearchParams} from 'next/navigation';
 import {Plus,ArrowRight,Github,Search,FolderCode,Loader2,LogIn,RefreshCw} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
-import {createJojoAiProject,getJojoAiSession,getProjectsForUser,getProjectInvitations,respondToProjectInvitation} from '@/lib/actions/dev-portal.actions';
+import {createJojoAiProject,getJojoAiSession,getProjectsForUser,getProjectInvitations,respondToProjectInvitation} from '@/lib/client/studio-actions';
 import {StudioIDE} from '@/components/StudioIDE';
 function Dashboard(){
  const [invitations,setInvitations]=useState<any[]>([]);const params=useSearchParams();const [session,setSession]=useState<any>(null),[projects,setProjects]=useState<any[]>([]),[active,setActive]=useState<any>(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[creating,setCreating]=useState(false),[name,setName]=useState(''),[description,setDescription]=useState(''),[template,setTemplate]=useState('empty'),[query,setQuery]=useState('');

@@ -2,7 +2,7 @@
 import {useEffect,useState} from 'react';
 import {KeyRound,ImagePlus,Github,Smartphone,Loader2} from 'lucide-react';
 import {Button} from '@/components/ui/button';import {Input} from '@/components/ui/input';
-import {generateLogo} from '@/lib/actions/assets.actions';
+import {generateLogo} from '@/lib/client/studio-actions';
 export function DeveloperTools({projectId,android,onRefresh,onRun}:{projectId:number;android:boolean;onRefresh:()=>void;onRun:(id:string|null)=>void}){
  const [settings,setSettings]=useState<any>({}),[key,setKey]=useState(''),[prompt,setPrompt]=useState(''),[path,setPath]=useState(android?'app/src/main/res/drawable/jojo_logo.png':'public/images/jojo-logo.png'),[integrate,setIntegrate]=useState(true),[busy,setBusy]=useState(false),[notice,setNotice]=useState('');
  async function refresh(){const r=await fetch('/api/integrations/openai',{cache:'no-store'});if(r.ok)setSettings(await r.json());}useEffect(()=>{refresh();},[]);

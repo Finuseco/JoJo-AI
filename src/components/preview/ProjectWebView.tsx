@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useState} from 'react';
 import {Monitor,Smartphone,Copy,ExternalLink,RefreshCw,Terminal} from 'lucide-react';
 import {Button} from '@/components/ui/button';
-import {toggleProjectVisibility} from '@/lib/actions/dev-portal.actions';
+import {toggleProjectVisibility} from '@/lib/client/studio-actions';
 export function ProjectWebView({projectId,isPublic,isOwner,onPublicChange,onTerminal}:{projectId:number;isPublic:boolean;isOwner:boolean;onPublicChange:(value:boolean)=>void;onTerminal:()=>void}){
  const [size,setSize]=useState<'mobile'|'desktop'>('desktop'),[key,setKey]=useState(0),[data,setData]=useState<any>({}),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false),[origin,setOrigin]=useState('');
  const refresh=useCallback(async()=>{try{const r=await fetch(`/api/projects/${projectId}/runtime`,{cache:'no-store'});if(r.ok)setData(await r.json());}catch{}},[projectId]);

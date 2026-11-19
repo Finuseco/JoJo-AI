@@ -1,0 +1,30 @@
+'use client';
+import {studioRequest} from './studio-api';
+export async function getJojoAiSession(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'dev',action:'getJojoAiSession',args});}
+export async function getProjectsForUser(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'dev',action:'getProjectsForUser',args});}
+export async function inviteCollaborator(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'dev',action:'inviteCollaborator',args});}
+export async function createJojoAiProject(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'dev',action:'createJojoAiProject',args});}
+export async function getProjectFileTree(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'dev',action:'getProjectFileTree',args});}
+export async function getFileContent(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'dev',action:'getFileContent',args});}
+export async function saveFileContent(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'dev',action:'saveFileContent',args});}
+export async function getPendingActions(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'dev',action:'getPendingActions',args});}
+export async function approvePendingAction(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'dev',action:'approvePendingAction',args});}
+export async function approveAllPendingActions(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'dev',action:'approveAllPendingActions',args});}
+export async function rejectPendingAction(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'dev',action:'rejectPendingAction',args});}
+export async function getCredits(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'dev',action:'getCredits',args});}
+export async function deleteProject(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'dev',action:'deleteProject',args});}
+export async function getProjectDatabases(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'dev',action:'getProjectDatabases',args});}
+export async function provisionNewDatabase(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'dev',action:'provisionNewDatabase',args});}
+export async function runSqlQuery(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'dev',action:'runSqlQuery',args});}
+export async function toggleProjectVisibility(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'dev',action:'toggleProjectVisibility',args});}
+export async function createFileSystemItem(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'dev',action:'createFileSystemItem',args});}
+export async function triggerBuild(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'dev',action:'triggerBuild',args});}
+export async function getProjectInvitations(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'dev',action:'getProjectInvitations',args});}
+export async function respondToProjectInvitation(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'dev',action:'respondToProjectInvitation',args});}
+export async function sendChatMessage(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'ai',action:'sendChatMessage',args});}
+export async function getChatHistory(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'ai',action:'getChatHistory',args});}
+export async function getAiProviders(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'ai',action:'getAiProviders',args});}
+export async function getGenerationProgress(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'ai',action:'getGenerationProgress',args});}
+export async function generateLogo(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'assets',action:'generateLogo',args});}
+export async function requestTransactionOtp(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'billing',action:'requestTransactionOtp',args});}
+export async function buyChatCredits(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'billing',action:'buyChatCredits',args});}
