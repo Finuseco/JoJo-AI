@@ -25,7 +25,7 @@ Renderer security: sandbox + context isolation, Node integration disabled, no fi
 
 ## IDE behavior
 
-Desktop: activity rail, resizable explorer/editor/assistant and a dockable terminal (Ctrl J). Mobile: horizontal navigation, dismissible file drawer and full-width editor/chat. Ctrl P opens actual files/commands; Ctrl S saves; Ctrl B toggles the explorer. Monaco workers load from the application, not a CDN. File create/save/rename/delete use API v1; stale writes return 409. Dirty buffers stay intact until saved/discarded. The file palette and explorer use the server's actual tree.
+Desktop: activity rail, resizable explorer/editor/assistant and a dockable terminal (Ctrl J). Mobile: horizontal navigation, dismissible file drawer and full-width tactile text editor/chat. Monaco is used on desktop; the phone editor uses a real textarea with cursor/line tracking and the same versioned save API, avoiding reliance on desktop editor behavior for virtual keyboards. Ctrl P opens actual files/commands; Ctrl S saves; Ctrl B toggles the explorer. Monaco workers load from the application, not a CDN. File create/save/rename/delete use API v1; stale writes return 409. Dirty buffers stay intact until saved/discarded. The file palette and explorer use the server's actual tree.
 
 Chat displays actual OpenAI stream snippets, not a typewriter simulation. Complete proposals can be diffed/approved individually or atomically as a group. It remains a proposal generator: there is no autonomous Codex CLI read/edit/test loop, plugin marketplace or unrestricted host terminal. The API's dedicated workers execute actual commands and emulator sessions only when configured.
 
