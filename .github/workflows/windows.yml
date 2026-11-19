@@ -1,0 +1,22 @@
+name: Windows portable
+on:
+  workflow_dispatch:
+  push:
+    tags: ['desktop-v*']
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run desktop:package:windows
+      - uses: actions/upload-artifact@v4
+        with:
+          name: JoJo-AI-Windows-x64
+          path: desktop/dist/JoJo AI Studio-win32-x64/

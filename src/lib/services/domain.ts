@@ -1,1 +1,0 @@
-export async function pointDomainToHost(_domain:string,_ip:string):Promise<never>{throw new Error('Utilisez la vérification DNS du panneau Hébergement. Aucune modification du registrar n’est effectuée automatiquement.');}

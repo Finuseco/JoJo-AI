@@ -1,11 +1,17 @@
-# JoJo AI Studio
+# JoJo AI Studio — Web & Windows
 
-Responsive developer workspace using the **OpenAI API only**. Import GitHub repositories or ZIP projects, edit source, receive streamed coding proposals, review/apply changes, generate transparent PNG logos, and export your work.
+Virtual IDE for **https://ai.cashpay-all.com**: local Monaco editor/workers, resizable explorer/editor/assistant, command palette, file tabs, integrated project terminal, real OpenAI proposal stream and version-aware file operations. The mobile layout uses full-width panels instead of shrinking the desktop workspace.
 
-- Studio listens on **127.0.0.1:8095**; publish through Nginx HTTPS.
-- 100 daily credits per authenticated user, non-cumulative, UTC. Each successful coding/logo request consumes one shared credit; failed reservations are refunded exactly once. Optional encrypted personal API keys use the user's OpenAI API billing instead.
-- ChatGPT/Codex subscriptions are not reused as API credentials. Never provide ChatGPT passwords/cookies to this application.
-- Real Android runs on a separate KVM/Docker worker; it is not a phone illustration or a hosted OpenAI feature.
-- Runtime/hosting supports isolated Node builds and static publication; native APK compilation, arbitrary third-party/MCP plugins and SSR hosting are not implemented.
+## Separate backend
 
-See [deployment and configuration](deploy/README.md), [verification](deploy/VERIFICATION.md), [Nginx upstream](deploy/studio-nginx.conf.example) and [PM2 configuration](deploy/ecosystem.config.cjs).
+The business API is now a separate project, [Finuseco/ai_api](https://github.com/Finuseco/ai_api), developed independently in `/workspace/ai_api`. Web listens on 127.0.0.1:8095; the API on 127.0.0.1:8096. Nginx routes `/api/` to the API and other paths to the web, under the same public HTTPS origin. The web's server-action adapters and development gateway also forward to this API. OpenAI keys, JWT signing, encryption and database access belong to the API environment only.
+
+Copy `.env.example` to `.env.local`, configure the internal API address, then `npm ci`, `npm run build`, and `pm2 start deploy/ecosystem.config.cjs`. Deploy/migrate the API first. See [deployment](deploy/README.md), [audit](deploy/AUDIT.md) and [Nginx](deploy/studio-nginx.conf.example).
+
+## Windows
+
+`npm run desktop:package:windows` builds a genuine Windows x64 portable Electron application for ai.cashpay-all.com. Distribute the whole generated folder, not the EXE alone. The Windows CI workflow packages it on windows-latest. The client uses the same cloud workspace/API/session; it is not an offline local development server. No OpenAI keys, database passwords, unrestricted filesystem IPC or host shell are embedded. Code signing, installer/update publishing and native Windows runtime verification remain release steps.
+
+## Actual limits
+
+The API provides 100 non-cumulative daily application credits; these do not make OpenAI usage free. API billing is distinct from ChatGPT subscription billing, subject to OpenAI's actual eligible API-credit programs. No subscription/session-cookie workaround is used. Android boot still needs a KVM worker; native APK and arbitrary Windows project compilation are not implemented. No provider output or emulator screen is simulated.
