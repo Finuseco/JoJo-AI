@@ -12,3 +12,7 @@ Production build and TypeScript passed; 18 contract tests passed. A configuratio
 ## Existing 22-character developer secret — 2026-11-20
 
 The server diagnostic reported an existing 22-character DEV_PORTAL_JWT_SECRET. The repair and verification paths previously required 32 characters and therefore rejected it before deployment. Repair now copies the existing key and pins its SHA-256 fingerprint; unpinned short keys are rejected. The portal handoff's length check accepts the existing key without changing portal accounts or environment values. Nineteen contract tests cover legacy compatibility, wrong-key/role/expiry rejection and preserving the portal files. Both application builds pass. No real signing key was received or printed.
+
+## Mobile dashboard and project navigation — 2026-11-20
+
+Production build and TypeScript passed. Browser tests at 320, 360, 390 and 768px verified no horizontal overflow, projects heading above 650px, account menu opening, project creation dialog within viewport, actual project creation and IDE opening, four primary project navigation actions, project menu and project switch control access, and return to the new project card. Desktop creation at 1440px and existing authentication/tenant-isolation browser checks also passed. Mobile keeps the same solid colors and supplied logo. Account details and less-used IDE commands remain accessible in dialogs rather than wrapping across the header. No deployment or database changes are required for this UI update.
