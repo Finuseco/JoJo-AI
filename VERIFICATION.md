@@ -8,3 +8,7 @@ The owl artwork supplied by the user was converted to PNG, not regenerated. The 
 ## AI-only session repair — 2026-11-20
 
 Production build and TypeScript passed; 18 contract tests passed. A configuration fixture verifies repair does not change any portal file, preserves existing OpenAI/encryption credentials, writes protected backups and overrides stale PM2 signing/database settings. Browser/PostgreSQL checks repeat the portal handoff, then drop the daily quota table: the named account and profile photo remain visible, the session API returns 200 with creditsAvailable=false, and entering a project name enables creation. After restoring quota storage, actual project creation and IDE opening pass. A stale local cookie is also tested with a valid shared cookie. Production server state has not been inspected or changed.
+
+## Existing 22-character developer secret — 2026-11-20
+
+The server diagnostic reported an existing 22-character DEV_PORTAL_JWT_SECRET. The repair and verification paths previously required 32 characters and therefore rejected it before deployment. Repair now copies the existing key and pins its SHA-256 fingerprint; unpinned short keys are rejected. The portal handoff's length check accepts the existing key without changing portal accounts or environment values. Nineteen contract tests cover legacy compatibility, wrong-key/role/expiry rejection and preserving the portal files. Both application builds pass. No real signing key was received or printed.

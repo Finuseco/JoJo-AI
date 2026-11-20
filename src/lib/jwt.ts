@@ -1,8 +1,9 @@
 import jwt from 'jsonwebtoken';
+import {createHash} from 'node:crypto';
 export interface JwtPayload {id:number; username:string; manager_name:string; b2b_user_id?:number|null; role?:string}
 export function verifyToken(token:string):JwtPayload|null {
   const secret=process.env.JOJO_AUTH_JWT_SECRET || process.env.JWT_SECRET;
-  if(!secret || secret.length<32) return null;
+  if(!secret || (secret.length<32 && (secret.length<16 || createHash('sha256').update(secret).digest('hex')!==process.env.JOJO_LEGACY_DEVELOPER_SECRET_SHA256))) return null;
   try {
     const decoded=jwt.verify(token,secret,{algorithms:['HS256'],
       ...(process.env.JOJO_AUTH_ISSUER?{issuer:process.env.JOJO_AUTH_ISSUER}:{}),
