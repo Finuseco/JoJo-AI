@@ -12,6 +12,6 @@ function create(){window=new BrowserWindow({width:1440,height:960,minWidth:360,m
  window.webContents.on('did-navigate',(_,url)=>{const host=new URL(url).hostname;window.setTitle('JoJo AI Studio — '+host);});
  const command=(label,id,accelerator)=>({label,accelerator,click:()=>window.webContents.send('studio:command',id)});
  Menu.setApplicationMenu(Menu.buildFromTemplate([{label:'Fichier',submenu:[command('Projets','projects'),{type:'separator'},{role:'quit',label:'Quitter'}]},{label:'Édition',submenu:[{role:'undo',label:'Annuler'},{role:'redo',label:'Rétablir'},{type:'separator'},{role:'cut',label:'Couper'},{role:'copy',label:'Copier'},{role:'paste',label:'Coller'},{role:'selectAll',label:'Tout sélectionner'}]},{label:'Affichage',submenu:[command('Palette de commandes','palette','Control+Shift+P'),command('Explorateur','explorer','Control+B'),command('Terminal','terminal','Control+J'),{role:'reload',label:'Actualiser'},{role:'togglefullscreen',label:'Plein écran'},{role:'resetZoom',label:'Zoom normal'},{role:'zoomIn',label:'Agrandir'},{role:'zoomOut',label:'Réduire'}]}]));
- window.loadURL(origin);
+ window.loadURL(new URL('/dashboard',origin).href);
 }
 if(!app.requestSingleInstanceLock())app.quit();else{app.on('second-instance',()=>{if(window){if(window.isMinimized())window.restore();window.focus();}});app.whenReady().then(create);app.on('window-all-closed',()=>app.quit());app.on('certificate-error',(event,contents,url,error,certificate,callback)=>{event.preventDefault();callback(false);});}

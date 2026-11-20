@@ -15,3 +15,7 @@ The former split ai_api service is superseded. See deploy/README.md for safely m
 Windows: `npm run desktop:package:windows` builds a genuine x64 portable Electron client opening this same public endpoint. The Windows executable has no server secrets; its renderer stays sandboxed. The application is online, not an offline local server. Signing/native Windows runtime tests remain release work.
 
 No demo database/provider result or drawn emulator fallback is used. OpenAI requests require actual configuration and API billing. Android boot needs KVM. Optional isolated build/emulator workers remain tools behind this application's API; they are not separate web/API deployments. See deploy/AUDIT.md for remaining capability limits.
+
+### Public showcase and studio entry
+
+`/` is a lightweight JoJo AI presentation served from `public/showcase/index.html`, with local `style.css` and `main.js`. It follows the CashPay showcase structure and verified violet palette, with the supplied owl logo, FR/EN content and reduced-motion animations. It does not load the IDE or request a session. `/dashboard` is the authenticated project dashboard, `/workspace/:id` the existing IDE, and `/api/...` the same backend on port 8095. Sign-in callbacks enter the dashboard directly. No additional service, dependency or database migration is required for the showcase.
