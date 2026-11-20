@@ -3,7 +3,7 @@ import {db} from './db';
 import {verifyToken} from './jwt';
 import type {DevPortalUser} from './types';
 export async function studioSession(providedToken?:string) {
-  const token=providedToken || cookies().get('__Secure-cp_developer_sso')?.value || cookies().get('dev_portal_token')?.value;
+  const token=providedToken || cookies().get('dev_portal_token')?.value || cookies().get('__Secure-cp_developer_sso')?.value;
   if(!token)return {success:false as const};
   const decoded=verifyToken(token);
   if(!decoded)return {success:false as const};

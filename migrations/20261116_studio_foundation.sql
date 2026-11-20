@@ -30,4 +30,6 @@ ALTER TABLE jojo_ai_daily_credits ALTER COLUMN grant_limit SET DEFAULT 100;
 ALTER TABLE jojo_ai_daily_credits ADD CONSTRAINT jojo_ai_daily_credits_remaining_check CHECK(remaining BETWEEN 0 AND 100);
 ALTER TABLE project_pending_actions ADD COLUMN IF NOT EXISTS runtime_job_id UUID;
 CREATE UNIQUE INDEX IF NOT EXISTS pending_runtime_job_file ON project_pending_actions(project_id,runtime_job_id,file_path) WHERE runtime_job_id IS NOT NULL;
+CREATE TABLE IF NOT EXISTS jojo_ai_sso_codes(code_hash TEXT PRIMARY KEY,challenge TEXT NOT NULL,grant_token TEXT NOT NULL,expires_at TIMESTAMPTZ NOT NULL);
+CREATE INDEX IF NOT EXISTS jojo_ai_sso_expiry ON jojo_ai_sso_codes(expires_at);
 COMMIT;

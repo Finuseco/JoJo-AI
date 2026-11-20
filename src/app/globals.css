@@ -100,3 +100,9 @@
 .code-attr { color: #d19a66; }
 .code-bool { color: #d19a66; }
 .code-type { color: #56b6c2; }
+
+@keyframes jojo-arrive{from{opacity:.4;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
+@keyframes jojo-working{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.65;transform:scale(.96)}}
+.jojo-brand-enter{animation:jojo-arrive .25s ease-out both}
+.jojo-brand-busy{animation:jojo-working 1.4s ease-in-out infinite}
+@media(prefers-reduced-motion:reduce){.jojo-brand-enter,.jojo-brand-busy{animation:none}}

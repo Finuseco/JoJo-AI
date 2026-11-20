@@ -1,0 +1,2 @@
+import Image from 'next/image';
+export function JojoBrand({busy=false,large=false}:{busy?:boolean,large?:boolean}){return <span className="inline-flex shrink-0 items-center gap-3"><Image src="/brand/jojo-ai.png" alt="JoJo AI" width={large?112:44} height={large?112:44} priority className={`rounded-xl object-contain ${busy?'jojo-brand-busy':'jojo-brand-enter'}`}/>{!large&&<span className="text-base font-semibold tracking-tight">JoJo <span className="text-violet-400">AI</span></span>}</span>}

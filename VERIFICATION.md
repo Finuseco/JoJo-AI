@@ -1,0 +1,6 @@
+
+## Developer session handoff and supplied owl brand — 2026-11-20
+
+Both production builds passed. Sixteen contract tests include browser challenge, audience, role, expiry and signature rejection. A Chromium test with two local Next processes, an isolated PostgreSQL schema and test-only HTTPS proxy verified: an existing portal-only HttpOnly session enters AI via the portal menu without any shared-domain cookie; AI shows the fixture developer name; other users' projects stay hidden; an empty account creates a project, enters the IDE and returns to the project list; consumed code replay is refused; a direct mobile visit silently recovers the portal session with no horizontal overflow; anonymous users settle on sign-in without a redirect loop. TLS fixtures and authentication fixtures are local tests, not production credentials. Production DNS and deployment were not changed.
+
+The owl artwork supplied by the user was converted to PNG, not regenerated. The dashboard, IDE, loading screen, portal entry and favicon use it. Solid application backgrounds remain; motion is disabled with prefers-reduced-motion. Portal TypeScript still reports unrelated pre-existing modules; no new handoff module errors were reported.
