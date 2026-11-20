@@ -11,3 +11,9 @@ The previous shared __Secure-cp_developer_sso cookie is still accepted for compa
 Failures return a controlled sign-in screen. Check the shared database, migration and secrets. Logs never print grant tokens, authorization codes, signing secrets or personal account data. Windows has a separate browser cookie jar and must authenticate there.
 
 Brand asset: public/brand/jojo-ai.png is the supplied owl image converted to PNG without regenerating the artwork. The UI uses object-contain at 44px in navigation, 112px during opening, plus the favicon. Reduced-motion disables the subtle arrival/loading animation. Application backgrounds remain solid.
+
+## AI-only repair
+
+From /var/www/cashpay-all/jo-ai run `npm run session:repair`, then build and use `pm2 startOrRestart deploy/ecosystem.config.cjs --update-env`. This reads the sibling developer environment to reuse its existing signing secret and PostgreSQL settings, writes protected backups and updated AI environment files, and applies AI migrations. It never modifies developer files. Node.js 22's built-in environment parser is used; no dotenv installation is required. PM2 explicitly loads the saved AI environment so inherited stale signing/database values are replaced.
+
+Identity verification reads only dev_portal_users and accepts the first valid local/shared developer cookie. Credit account initialization happens when quotas are requested or a generation is reserved, not while authenticating. Missing credit storage therefore reports unavailable quotas rather than logging the developer out. The session API returns authenticated user data with creditsAvailable=false if only quota storage fails. Database identity failures are reported separately instead of becoming an ordinary anonymous session. Profile photos come from the optional profile_photo property; missing or failed photos use name initials.

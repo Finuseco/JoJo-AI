@@ -1,5 +1,6 @@
 
 export interface DevPortalUser {
+    profile_photo?: string | null;
     id: number;
     username: string;
     company_name: string;

@@ -18,7 +18,7 @@ import { revalidatePath } from 'next/cache';
  * Récupère ou synchronise la session utilisateur Elite via cookies.
  */
 export async function getJojoAiSession(providedToken?: string) {
-    try { return await studioSession(providedToken); } catch {return {success:false as const};}
+    try { return await studioSession(providedToken); } catch {console.error('[Studio session] Identity database unavailable; verify AI database configuration.');return {success:false as const,reason:'SESSION_SERVICE_UNAVAILABLE' as const,error:'Impossible de vérifier votre compte développeur. La connexion PostgreSQL de JoJo AI doit être vérifiée.'};}
 }
 
 /**

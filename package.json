@@ -14,7 +14,8 @@
     "migrate": "node scripts/migrate.cjs",
     "generations:reconcile": "node scripts/reconcile-generations.cjs",
     "test:credits": "node tests/credits-integration.cjs",
-    "test:runtime": "node tests/runtime-smoke.cjs"
+    "test:runtime": "node tests/runtime-smoke.cjs",
+    "session:repair": "node scripts/repair-session.cjs"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",

@@ -1,7 +1,7 @@
 // Run on the VPS after installing dependencies. Never prints secret values.
-const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),dotenv=require('dotenv');
+const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),{parseEnv}=require('node:util');
 const studio=path.resolve(__dirname,'..'),portal=process.argv[2]||'/var/www/cashpay-all/developer';
-function read(root){let env={};for(const name of ['.env','.env.production','.env.local','.env.production.local']){const f=path.join(root,name);if(fs.existsSync(f))Object.assign(env,dotenv.parse(fs.readFileSync(f)));}return env;}
+function read(root){let env={};for(const name of ['.env','.env.production','.env.local','.env.production.local']){const f=path.join(root,name);if(fs.existsSync(f))Object.assign(env,parseEnv(fs.readFileSync(f,'utf8')));}return env;}
 function update(root,values){const files=['.env.local'];if(fs.existsSync(path.join(root,'.env.production.local')))files.push('.env.production.local');for(const name of files){const f=path.join(root,name);let data=fs.existsSync(f)?fs.readFileSync(f,'utf8'):'';if(fs.existsSync(f)){const backup=f+'.backup-'+Date.now();fs.writeFileSync(backup,data,{mode:0o600});fs.chmodSync(backup,0o600);}for(const [key,value] of Object.entries(values)){data=data.split('\n').filter(line=>!new RegExp('^\\s*(?:export\\s+)?'+key+'\\s*=').test(line)).join('\n');data+='\n'+key+'='+JSON.stringify(value)+'\n';}fs.writeFileSync(f,data,{mode:0o600});fs.chmodSync(f,0o600);}}
 const dev=read(portal),ai=read(studio),secret=dev.DEV_PORTAL_JWT_SECRET;if(!secret||secret.length<32)throw Error('A valid existing DEV_PORTAL_JWT_SECRET (32+ characters) is required in the developer environment. It was not changed.');
 if(!dev.DB_NAME)throw Error('Configure DB_NAME and the PostgreSQL connection in the developer environment first.');
