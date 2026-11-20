@@ -1,5 +1,30 @@
-# Inside the TLS server for ai.cashpay-all.com.
-# One Next.js application on 8095 serves pages AND all /api/ routes.
+# Inside the existing TLS server for ai.cashpay-all.com.
+# The public HTML showcase is served by Nginx, even when Next.js is stopped.
+# Point these filesystem paths at the actual checkout if it differs.
+location = / {
+    if ($arg_auth != "") { return 302 /dashboard?$args; }
+    root /var/www/cashpay-all/jo-ai;
+    try_files /index.html =404;
+    charset utf-8;
+    add_header Cache-Control "no-cache";
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy no-referrer always;
+}
+location = /index.html {
+    root /var/www/cashpay-all/jo-ai;
+    try_files /index.html =404;
+    charset utf-8;
+    add_header Cache-Control "no-cache";
+    add_header X-Content-Type-Options nosniff always;
+}
+location ^~ /showcase/ {
+    alias /var/www/cashpay-all/jo-ai/showcase/;
+    autoindex off;
+    charset utf-8;
+    add_header Cache-Control "no-cache";
+    add_header X-Content-Type-Options nosniff always;
+}
+# Dashboard, project IDE and all API routes still share one application on 8095.
 location / {
     proxy_pass http://127.0.0.1:8095;
     proxy_http_version 1.1;
@@ -13,5 +38,4 @@ location / {
     client_max_body_size 45m;
     add_header Referrer-Policy no-referrer always;
 }
-# Configure TLS through the existing certificate manager.
-# The optional /android/ viewer location is only needed for a configured emulator worker.
+# Keep the existing certificate and certificate renewal configuration.
