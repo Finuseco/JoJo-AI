@@ -255,3 +255,29 @@ export async function triggerBuild(projectId:number) {
 
 export async function getProjectInvitations(){try{const s=await studioSession();if(!s.success||!s.user)throw Error('Session requise.');const {rows}=await db.query("SELECT c.id,p.name FROM project_collaborators c JOIN jojo_ai_projects p ON p.id=c.project_id WHERE c.user_id=$1 AND c.status='pending'",[s.user.id]);return {success:true,invitations:rows};}catch{return {success:false,invitations:[]};}}
 export async function respondToProjectInvitation(id:number,accept:boolean){try{const s=await studioSession();if(!s.success||!s.user)throw Error('Session requise.');const r=await db.query("UPDATE project_collaborators SET status=$1,accepted_at=CASE WHEN $1='accepted' THEN now() ELSE NULL END WHERE id=$2 AND user_id=$3 AND status='pending'",[accept?'accepted':'rejected',id,s.user.id]);return {success:r.rowCount===1};}catch{return {success:false};}}
+
+export async function updateProjectDetails(projectId:number,name:string,description:string){
+ try{
+  await requireProject(projectId,true);
+  if(typeof name!=='string'||!name.trim()||name.length>120||typeof description!=='string'||description.length>5000)throw Error('Nom ou description invalide.');
+  await db.query('UPDATE jojo_ai_projects SET name=$1,description=$2,updated_at=now() WHERE id=$3',[name.trim(),description,projectId]);
+  return {success:true};
+ }catch(e:any){return {success:false,error:e.message};}
+}
+
+export async function duplicateProject(projectId:number){
+ let c;
+ try{
+  const {user,project}=await requireProject(projectId,true);
+  c=await db.getConnection();await c.query('BEGIN');
+  await c.query('SELECT id FROM dev_portal_users WHERE id=$1 FOR UPDATE',[user.id]);
+  if(Number((await c.query('SELECT COUNT(*)::int AS count FROM jojo_ai_projects WHERE dev_portal_user_id=$1',[user.id])).rows[0].count)>=50)throw Error('Limite de 50 projets atteinte.');
+  const copyName=(String(project.name).slice(0,112)+' (copie)').slice(0,120);
+  const created=await c.query('INSERT INTO jojo_ai_projects (dev_portal_user_id,name,description,app_template,is_public) VALUES ($1,$2,$3,$4,false) RETURNING id',[user.id,copyName,project.description,project.app_template]);
+  const newId=created.rows[0].id;
+  await c.query('INSERT INTO jojo_ai_project_files(project_id,file_path,file_content,file_encoding,file_mode) SELECT $1,file_path,file_content,file_encoding,file_mode FROM jojo_ai_project_files WHERE project_id=$2',[newId,projectId]);
+  await c.query('COMMIT');
+  return {success:true,projectId:newId};
+ }catch(e:any){await c?.query('ROLLBACK');return {success:false,error:e.message};}
+ finally{c?.release();}
+}

@@ -28,3 +28,5 @@ export async function getGenerationProgress(...args:any[]):Promise<any>{return s
 export async function generateLogo(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'assets',action:'generateLogo',args});}
 export async function requestTransactionOtp(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'billing',action:'requestTransactionOtp',args});}
 export async function buyChatCredits(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'billing',action:'buyChatCredits',args});}
+export async function updateProjectDetails(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'dev',action:'updateProjectDetails',args});}
+export async function duplicateProject(...args:any[]):Promise<any>{return studioRequest('/api/v1/workspace/actions','POST',{group:'dev',action:'duplicateProject',args});}
