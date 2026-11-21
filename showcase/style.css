@@ -15,3 +15,107 @@
 @media(max-width:480px){.access-grid{grid-template-columns:1fr}.access-card{padding:23px}.access-return{font-size:12px;text-align:left;line-height:1.9}.access-return a{display:block}.brief-example blockquote{padding:20px 20px 0;font-size:13px}.brief-example .text-link{padding:0 20px 20px;font-size:11px}.brief-checklist li{font-size:12px}.journey{gap:24px 10px}.journey-node{width:48px;height:48px;border-radius:15px}.journey-node .icon{width:21px;height:21px}.journey strong{font-size:10px}.delivery{padding:23px}.delivery .button{width:100%}.footer-top{grid-template-columns:1fr 1fr;gap:30px 20px}.footer-top>div:first-child{grid-column:1/-1}.footer-column h3{font-size:12px}.footer-column a{font-size:11px}.footer-bottom{font-size:9px;flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){.journey-node{animation:none}}
 @media(min-width:801px) and (max-width:980px){.nav-row{min-height:70px}.nav-actions>.button{display:none}.menu-toggle{display:flex}.nav-links{display:none;position:absolute;left:20px;right:20px;top:calc(100% + 8px);padding:12px;background:white;border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 40px #1e033515;flex-direction:column;align-items:stretch;gap:0}.nav-links.open{display:flex}.nav-links a{font-size:13px;padding:12px}.mobile-auth{display:block;border-top:1px solid var(--line);color:var(--primary)}}
+
+/* ==========================================================================
+   Design JoJo AI : fond dégradé violet / bleu animé, cartes vitrées, boutons lumineux.
+   Bloc ajouté à la fin du fichier : pour revenir au style précédent, supprimez
+   tout ce qui se trouve entre ce commentaire et la fin du fichier.
+   Aucune image, police ni script externe : tout reste local.
+   ========================================================================== */
+:root{color-scheme:dark;--primary:#b9a2ff;--primary-hover:#d4c4ff;--ink:#0b0a33;--ink-soft:#15125a;--muted:#c6c0e4;--soft:rgba(255,255,255,.055);--line:rgba(168,140,255,.26);--jj-text:#f3f0ff;--jj-grad:linear-gradient(90deg,#67e8f9 0%,#a5b4fc 48%,#e879f9 100%);--jj-btn:linear-gradient(135deg,#6d28d9 0%,#7c3aed 52%,#4f46e5 100%)}
+html{background:#0a0933}
+body{background:transparent;color:var(--jj-text);position:relative;isolation:auto}
+::selection{background:#7c3aed;color:#fff}
+
+/* Fond animé : halos violet et cyan qui dérivent doucement + trame fine */
+body::before{content:"";position:fixed;inset:-25%;z-index:-2;pointer-events:none;background:radial-gradient(circle at 14% 12%,rgba(168,85,247,.52) 0,transparent 40%),radial-gradient(circle at 86% 88%,rgba(34,211,238,.36) 0,transparent 42%),radial-gradient(circle at 72% 18%,rgba(79,70,229,.40) 0,transparent 38%),linear-gradient(155deg,#0b0a33 0%,#150f4f 45%,#0a2466 100%);animation:jj-aurora 24s ease-in-out infinite alternate;will-change:transform}
+body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:54px 54px;-webkit-mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.35) 100%);mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.35) 100%)}
+@keyframes jj-aurora{0%{transform:translate3d(-2%,1%,0) scale(1)}50%{transform:translate3d(2%,-2%,0) scale(1.06)}100%{transform:translate3d(-1%,3%,0) scale(1.1)}}
+@keyframes jj-shine{to{background-position:200% 0}}
+@keyframes jj-halo{0%,100%{opacity:.75;transform:scale(1)}50%{opacity:1;transform:scale(1.08)}}
+
+/* En-tête */
+.skip{color:#0b0a33}
+.site-header{background:rgba(10,9,51,.74);border-bottom:1px solid var(--line);-webkit-backdrop-filter:blur(18px) saturate(1.3);backdrop-filter:blur(18px) saturate(1.3)}
+.brand img{box-shadow:0 8px 26px rgba(99,102,241,.55)}
+.brand b{background:linear-gradient(90deg,#c084fc,#f0abfc);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.nav-links a:hover{color:#fff}
+.languages{background:rgba(255,255,255,.08);border:1px solid var(--line)}
+.languages button{color:var(--muted)}
+.languages button[aria-pressed=true]{background:var(--jj-btn);color:#fff}
+.menu-toggle{color:var(--jj-text);border-color:var(--line)}
+
+/* Boutons */
+.button{background:var(--jj-btn);color:#fff;border-color:rgba(255,255,255,.2);box-shadow:0 10px 30px rgba(91,33,182,.5)}
+.button:hover{background:linear-gradient(135deg,#7c3aed 0%,#8b5cf6 52%,#6366f1 100%);box-shadow:0 14px 40px rgba(124,58,237,.6),0 0 0 4px rgba(34,211,238,.12)}
+.button-ghost{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.3);box-shadow:none}
+.button-ghost:hover{background:rgba(255,255,255,.14);box-shadow:none}
+.text-link{color:#c4b5fd}.text-link:hover{color:#67e8f9}
+.eyebrow{color:#67e8f9}.hero .eyebrow,.journey-section .eyebrow{color:#67e8f9}
+
+/* Accueil (hero) */
+.hero{background:transparent}
+.hero h1{color:#fff}
+.hero h1 em{background:var(--jj-grad);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;-webkit-box-decoration-break:clone;box-decoration-break:clone;animation:jj-shine 9s linear infinite}
+.hero-description{color:#d6d0f0}
+.hero-note{color:#b3acd6}
+.owl-wrap:before{content:"";position:absolute;width:300px;height:300px;max-width:90%;border-radius:50%;background:radial-gradient(circle,rgba(168,85,247,.55) 0,rgba(34,211,238,.18) 45%,transparent 70%);filter:blur(10px);animation:jj-halo 6s ease-in-out infinite}
+.owl-wrap>img{position:relative;z-index:1;box-shadow:0 20px 60px rgba(99,102,241,.55)}
+.visual-tag{z-index:2;background:rgba(21,18,90,.85);border-color:rgba(168,140,255,.4);color:#e9e4ff;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.code-window{background:rgba(12,10,52,.72);border-color:rgba(168,140,255,.38);box-shadow:0 26px 70px rgba(10,8,60,.6),0 0 0 1px rgba(34,211,238,.08);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.window-bar{border-bottom-color:rgba(168,140,255,.18);color:#c9c1ec}
+.window-dots i{background:#67e8f9}.window-dots i:nth-child(2){background:#a78bfa}.window-dots i:nth-child(3){background:#e879f9}
+.file-tree{border-right-color:rgba(168,140,255,.16);color:#c3b9e8}.file-tree strong{color:#f0ebff}
+.code-body pre{color:#ece8ff}
+.code-blue{color:#67e8f9}.code-purple{color:#d8b4fe}
+.cursor{background:#67e8f9}
+.window-footer{border-top-color:rgba(168,140,255,.16);color:#c9c1ec}.window-footer .icon{color:#67e8f9}
+
+/* Bandeau et sections */
+.value-strip{background:rgba(255,255,255,.05);border-bottom:1px solid var(--line);border-top:1px solid var(--line);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.value-row>span{color:#d9d3f3}.value-row .icon{color:#67e8f9}
+.access-section,.faq-section{background:rgba(255,255,255,.022)}
+.workflow,.brief-section{background:rgba(255,255,255,.04);border-top:1px solid rgba(168,140,255,.12);border-bottom:1px solid rgba(168,140,255,.12)}
+.journey-section{background:rgba(6,5,32,.5);border-top:1px solid rgba(168,140,255,.18);border-bottom:1px solid rgba(168,140,255,.18)}
+h2{color:#fff}
+
+/* Cartes vitrées */
+.feature-card,.access-card,.brief-example,.credit-card,.delivery{background:linear-gradient(160deg,rgba(255,255,255,.085),rgba(255,255,255,.03));border:1px solid var(--line);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:0 16px 44px rgba(5,4,40,.35)}
+.feature-card:hover{border-color:#a78bfa;box-shadow:0 20px 56px rgba(124,58,237,.3)}
+.feature-icon{background:linear-gradient(135deg,rgba(124,58,237,.45),rgba(34,211,238,.22));color:#e9e4ff;border:1px solid rgba(196,181,253,.35)}
+.step-number{background:linear-gradient(135deg,rgba(124,58,237,.5),rgba(34,211,238,.2));color:#fff;border:1px solid rgba(196,181,253,.4)}
+.steps li{border-bottom-color:var(--line)}
+.project-types span{background:rgba(255,255,255,.07);border-color:var(--line);color:#ddd6fb}
+.access-return a{color:#67e8f9}
+
+/* Exemple de demande : présenté comme une bulle de chat */
+.brief-tab{background:rgba(124,58,237,.28);color:#e4dcff;border-bottom:1px solid var(--line)}
+.brief-example blockquote{margin:22px 22px 0;padding:18px 20px;border-radius:22px 22px 6px 22px;background:linear-gradient(135deg,#6d28d9,#4f46e5);color:#fff;box-shadow:0 12px 34px rgba(79,70,229,.45)}
+.brief-example .text-link{padding:0 22px 22px;margin-top:20px}
+.brief-checklist li{color:#e0daf8}.brief-checklist .icon{color:#67e8f9}
+
+/* Parcours */
+.journey:before{background:linear-gradient(90deg,transparent,#8b5cf6 20%,#22d3ee 80%,transparent)}
+.journey-node{background:rgba(21,18,90,.9);border-color:rgba(168,140,255,.5);color:#d8ccff}
+.journey small{color:#b9afe0}
+
+/* Crédits */
+.credit-label{color:#c4b5fd}
+.credit-number{background:var(--jj-grad);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.credit-number>span{-webkit-text-fill-color:var(--muted);color:var(--muted)}
+.credit-card li .icon{color:#67e8f9}
+
+/* Questions */
+.faq-list{border-top-color:var(--line)}.faq-list details{border-bottom-color:var(--line)}
+summary:after{color:#67e8f9}
+
+/* Bandeau final et pied de page */
+.last-card{background:linear-gradient(135deg,rgba(109,40,217,.6),rgba(37,99,235,.42));border:1px solid rgba(196,181,253,.42);box-shadow:0 26px 80px rgba(79,70,229,.4)}
+.last-card p{color:#ddd5f7}
+footer{background:rgba(5,4,28,.55);border-top:1px solid var(--line)}
+.footer-intro,.footer-bottom{color:#c6c0e4}
+.footer-column a,.footer-row nav{color:#c6c0e4}.footer-column a:hover{color:#67e8f9}
+.footer-bottom{border-top-color:var(--line)}
+
+/* Menu mobile */
+@media(max-width:980px){.nav-links{background:#120f47;border-color:var(--line);box-shadow:0 22px 50px rgba(3,2,30,.6)}.mobile-auth{border-top-color:var(--line);color:#c4b5fd}}
