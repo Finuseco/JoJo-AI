@@ -1,19 +1,6 @@
 
 import nodemailer from 'nodemailer';
 
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'mail.cashpay-all.com',
-    port: parseInt(process.env.SMTP_PORT || '465'),
-    secure: true, 
-    auth: {
-        user: process.env.SMTP_USER || 'noreply@cashpay-all.com',
-        pass: process.env.SMTP_PASSWORD || 'Joannamubaka3@',
-    },
-    tls: {
-        rejectUnauthorized: false
-    }
-});
-
 interface MailOptions {
     to: string;
     subject: string;
@@ -22,6 +9,8 @@ interface MailOptions {
 
 export async function sendMail({ to, subject, html }: MailOptions) {
     try {
+        if(!process.env.SMTP_HOST||!process.env.SMTP_USER||!process.env.SMTP_PASSWORD)throw new Error('SMTP non configuré.');
+        const transporter=nodemailer.createTransport({host:process.env.SMTP_HOST,port:Number(process.env.SMTP_PORT||465),secure:Number(process.env.SMTP_PORT||465)===465,auth:{user:process.env.SMTP_USER,pass:process.env.SMTP_PASSWORD},tls:{rejectUnauthorized:true}});
         await transporter.sendMail({
             from: `"CashPay Elite Studio" <${process.env.SMTP_USER || 'noreply@cashpay-all.com'}>`,
             to,

@@ -1,30 +1,13 @@
 import jwt from 'jsonwebtoken';
-
-/**
- * Secret unifié pour l'écosystème Elite.
- * DOIT ÊTRE RIGOUREUSEMENT IDENTIQUE AU CENTRE AUTH.
- */
-const AUTH_SECRET = 'CASH-PAY-ELITE-SECURE-TUNNEL-SIGNATURE-KEY-2024-V3';
-
-export interface JwtPayload {
-    id: number;
-    username: string;
-    manager_name: string;
-    b2b_user_id?: number | null;
-}
-
-/**
- * Vérifie la validité du token émis par l'IDP.
- */
-export function verifyToken(token: string): JwtPayload | null {
-    try {
-        const decoded = jwt.verify(token, AUTH_SECRET);
-        if (typeof decoded === 'object' && 'id' in decoded) {
-            return decoded as JwtPayload;
-        }
-        return null;
-    } catch (error) {
-        console.error(`[JWT Studio Error] Invalid signature or expired token:`, error);
-        return null;
-    }
+import {createHash} from 'node:crypto';
+export interface JwtPayload {id:number; username:string; manager_name:string; b2b_user_id?:number|null; role?:string}
+export function verifyToken(token:string):JwtPayload|null {
+  const secret=process.env.JOJO_AUTH_JWT_SECRET || process.env.JWT_SECRET;
+  if(!secret || (secret.length<32 && (secret.length<16 || createHash('sha256').update(secret).digest('hex')!==process.env.JOJO_LEGACY_DEVELOPER_SECRET_SHA256))) return null;
+  try {
+    const decoded=jwt.verify(token,secret,{algorithms:['HS256'],
+      ...(process.env.JOJO_AUTH_ISSUER?{issuer:process.env.JOJO_AUTH_ISSUER}:{}),
+      ...(process.env.JOJO_AUTH_AUDIENCE?{audience:process.env.JOJO_AUTH_AUDIENCE}:{})});
+    return typeof decoded==='object' && decoded.role==='Developer' && Number.isSafeInteger(Number(decoded.id)) && Number(decoded.id)>0 ? decoded as JwtPayload : null;
+  } catch {return null;}
 }

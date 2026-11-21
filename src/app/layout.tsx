@@ -5,7 +5,9 @@ import { Toaster } from '@/components/ui/toaster';
 import { AlertDialogProvider } from '@/components/alert-dialog-provider';
 
 export const metadata: Metadata = {
-  title: 'JOJO AI Studio',
+  title: 'JoJo AI Studio',
+  icons: {icon: '/brand/jojo-ai.png', apple: '/brand/jojo-ai.png'},
+  referrer: 'no-referrer',
   description: 'AI-powered application development studio.',
 };
 

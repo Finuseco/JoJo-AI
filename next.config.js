@@ -1,16 +1,3 @@
+const MonacoWebpackPlugin=require('monaco-editor-webpack-plugin');
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  transpilePackages: [
-    'genkit',
-    '@genkit-ai/ai',
-    '@genkit-ai/core',
-    '@genkit-ai/dotprompt',
-    '@genkit-ai/google-genai',
-    '@genkit-ai/googleai'
-  ],
-};
-
-module.exports = nextConfig;
+module.exports={experimental:{serverActions:{bodySizeLimit:'12mb'}},webpack(config,{isServer}){if(!isServer)config.plugins.push(new MonacoWebpackPlugin({languages:['javascript','typescript','json','css','html','java','csharp','python','markdown','yaml','shell','sql','xml'],filename:'static/monaco/[name].worker.js',publicPath:'/_next/'}));return config;}};

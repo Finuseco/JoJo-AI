@@ -14,8 +14,7 @@ const CPANEL_DB_PREFIX = process.env.CPANEL_DB_PREFIX || 'jojo_';
 
 async function cpanelApiCall(module: string, func: string, params: Record<string, string | number>): Promise<any> {
     if (!CPANEL_API_TOKEN || !CPANEL_URL || !CPANEL_USER) {
-        console.warn(`[cPanel Service] Mode simulation pour ${module}/${func}.`);
-        return { status: 1, result: { status: 1, data: {} }, errors: null };
+        throw new Error('Service cPanel non configuré.');
     }
 
     const searchParams = new URLSearchParams();

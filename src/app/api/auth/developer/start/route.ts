@@ -1,0 +1,4 @@
+import {NextRequest,NextResponse} from 'next/server';
+import {randomBytes,createHash} from 'node:crypto';
+export const dynamic='force-dynamic';
+export async function GET(request:NextRequest){const state=randomBytes(32).toString('base64url'),challenge=createHash('sha256').update(state).digest('hex');const url=new URL('https://developer.cashpay-all.com/api/dev/jojo-ai');url.searchParams.set('challenge',challenge);if(request.nextUrl.searchParams.get('prompt')==='none')url.searchParams.set('prompt','none');const response=NextResponse.redirect(url,{headers:{'Cache-Control':'no-store','Referrer-Policy':'no-referrer'}});response.cookies.set(process.env.NODE_ENV==='production'?'__Host-jojo_sso_state':'jojo_sso_state',state,{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax',path:'/',maxAge:120});return response;}

@@ -1,0 +1,39 @@
+JOJO AI — MON CAHIER DES CHARGES
+
+Copiez le contenu complété dans le chat de votre projet. Ce modèle est une aide à la rédaction ; le télécharger ne crée ni ne soumet de projet.
+
+1. MON PROJET
+Nom :
+Objectif principal :
+Utilisateurs concernés :
+Type : site web / application web / projet Android / autre
+
+2. PREMIÈRE VERSION
+Liste des 3 fonctions prioritaires :
+Écrans attendus :
+Parcours principal d'un utilisateur :
+
+3. DONNÉES ET ACCÈS
+Données à utiliser :
+Rôles et droits (client, gérant, administrateur...) :
+Règles métier :
+Ne collez aucune clé API, aucun mot de passe ni aucune donnée personnelle réelle dans ce document.
+
+4. DESIGN
+Couleurs :
+Logo et références :
+Langues :
+Besoins mobile et ordinateur :
+
+5. PROJET EXISTANT
+Dépôt GitHub ou archive ZIP :
+Fonctions à conserver :
+Éléments à améliorer :
+
+6. VALIDATION ET LIVRAISON
+Comment vérifier chaque fonction :
+Résultat attendu en premier :
+Mode de récupération : ZIP / GitHub / publication statique si activée
+
+DEMANDE DE DÉPART
+« Voici mon projet. Commençons par [fonction prioritaire]. Propose les modifications pour que je puisse les vérifier avant de les appliquer. »

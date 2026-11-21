@@ -1,148 +1,41 @@
-
 'use client';
-
-import { FC, useState, useEffect } from 'react';
-import { Terminal as TermIcon, Shield, Wifi, AlertCircle, Trash2, Cpu, Smartphone, LayoutList, CheckCircle2, Download, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-
-interface StudioTerminalProps {
-    projectName: string;
-    projectId?: number;
+import {useCallback,useEffect,useRef,useState} from 'react';
+import {Terminal,Play,RefreshCw,ExternalLink,Square,Copy,Check} from 'lucide-react';
+import {Button} from '@/components/ui/button';import {Input} from '@/components/ui/input';
+export function StudioTerminal({projectId,projectName,hasUnsavedChanges=false,onRefresh,onOpenWebView,onOpenChanges}:{projectId:number;projectName:string;hasUnsavedChanges?:boolean;onRefresh?:()=>void;onOpenWebView?:()=>void;onOpenChanges?:()=>void}){
+ const [data,setData]=useState<any>({jobs:[]}),[busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[domain,setDomain]=useState(''),[dns,setDns]=useState<any>(null),[command,setCommand]=useState('npm run build'),[history,setHistory]=useState<string[]>([]),[historyIndex,setHistoryIndex]=useState(-1),[selected,setSelected]=useState(''),[copied,setCopied]=useState(false);
+ const output=useRef<HTMLPreElement>(null),base=`/api/projects/${projectId}/runtime`;
+ const refresh=useCallback(async()=>{try{const r=await fetch(base+(selected?'?jobId='+selected:''),{cache:'no-store'}),body=await r.json();if(!r.ok)throw Error(body.error);setData(body);}catch(e:any){setNotice(e.message);}},[base,selected]);
+ useEffect(()=>{refresh();const timer=setInterval(refresh,1200);return()=>clearInterval(timer);},[refresh]);
+ const running=data.jobs?.some((j:any)=>['queued','running'].includes(j.status)),job=(data.jobs||[]).find((j:any)=>j.id===selected)||data.jobs?.[0];
+ useEffect(()=>{if(output.current)output.current.scrollTop=output.current.scrollHeight;},[job?.logs]);
+ async function action(action:string,extra:Record<string,unknown>={}){
+  if(hasUnsavedChanges&&!['cancel','review-dependencies','request','verify'].includes(action)){setNotice('Enregistrez vos fichiers pour exécuter leur version actuelle.');return;}
+  setBusy(true);setNotice('');try{const isDomain=['request','verify'].includes(action),r=await fetch(base,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...(isDomain?{domain,siteId:data.site?.id}:{}),...extra})}),body=await r.json();if(!r.ok)throw Error(body.error);
+   if(isDomain)setDns(body);else if(action==='review-dependencies'){setNotice(body.alreadyProposed?'Ces manifestes ont déjà été proposés.':'package.json et le verrou sont disponibles dans Modifications. Validez-les pour les enregistrer dans le projet.');onRefresh?.();onOpenChanges?.();}
+   else if(action==='cancel')setNotice('Arrêt demandé au conteneur.');else{setSelected(body.job?.id||'');setNotice('Commande envoyée au worker. Les logs ci-dessous proviennent de son exécution réelle.');}
+   await refresh();
+  }catch(e:any){setNotice(e.message);}finally{setBusy(false);}
+ }
+ async function submit(e:React.FormEvent){e.preventDefault();if(!command.trim())return;setHistory(h=>[command,...h].slice(0,30));setHistoryIndex(-1);await action('command',{command});}
+ const disabled=busy||running||!data.configured||!data.canExecute||hasUnsavedChanges;
+ return <section className="h-full space-y-5 overflow-auto p-4 text-sm sm:p-5">
+  <header className="flex flex-wrap items-center gap-2"><Terminal size={18}/><h2 className="mr-auto font-semibold">Terminal · {projectName}</h2><Button size="sm" variant="outline" onClick={onOpenWebView}>WebView du projet</Button><Button size="icon" variant="ghost" aria-label="Actualiser le terminal" onClick={refresh}><RefreshCw size={16}/></Button></header>
+  <p className="text-zinc-400">Commandes npm sur un worker isolé, jamais sur le serveur CashPay. Chaque tâche part des fichiers enregistrés du projet. Les scripts s’exécutent sans réseau ; l’installation utilise le registre npm.</p>
+  {!data.configured&&<p className="rounded-xl border border-amber-400/30 p-3 text-amber-200">Configurez le worker pour activer les commandes. Aucun résultat n’est simulé.</p>}
+  {hasUnsavedChanges&&<p className="text-amber-200">Des fichiers sont modifiés dans l’éditeur. Enregistrez-les avant exécution.</p>}
+  {data.canExecute===false&&<p className="text-zinc-400">Seul le propriétaire peut lancer des commandes. Vous pouvez consulter l’historique du projet.</p>}
+  <div className="flex flex-wrap gap-2">{[['install','Installer'],['build','Compiler'],['publish-static','Publier HTML'],['build-and-publish','Compiler et publier']].map(([id,label])=><Button size="sm" key={id} variant={id.includes('publish')?'default':'outline'} disabled={disabled} onClick={()=>action(id)}><Play size={14}/>{label}</Button>)}</div>
+  <div className="overflow-hidden rounded-xl border border-white/15 bg-[#08070c]">
+   <div className="flex flex-wrap items-center gap-2 border-b border-white/10 px-4 py-3"><span className="mr-auto font-mono text-xs text-violet-300">{job?.command||job?.action||'jojo / workspace'}{job?` · ${job.status}`:''}</span>{job&&['queued','running'].includes(job.status)&&<Button size="sm" variant="outline" disabled={busy||!data.canExecute} onClick={()=>action('cancel',{jobId:job.id})}><Square size={12}/> Arrêter</Button>}</div>
+   <pre ref={output} aria-label="Sortie réelle du terminal" className="h-72 overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-xs leading-relaxed text-zinc-300">{job?.logs||'Aucune commande exécutée. Saisissez une commande npm ci-dessous.'}{job?.error?`\n${job.error}`:''}</pre>
+   <form onSubmit={submit} className="flex min-w-0 items-center gap-2 border-t border-white/10 p-3"><span className="font-mono text-violet-400">$</span><input className="min-w-0 flex-1 bg-transparent font-mono text-sm outline-none placeholder:text-zinc-600" aria-label="Commande npm" value={command} maxLength={1000} onChange={e=>setCommand(e.target.value)} spellCheck={false} autoComplete="off" onKeyDown={e=>{if(e.key==='ArrowUp'&&history.length){e.preventDefault();const i=Math.min(history.length-1,historyIndex+1);setHistoryIndex(i);setCommand(history[i]);}if(e.key==='ArrowDown'){e.preventDefault();const i=Math.max(-1,historyIndex-1);setHistoryIndex(i);setCommand(i<0?'':history[i]);}}}/><Button size="sm" disabled={disabled||!command.trim()}>Exécuter</Button></form>
+  </div>
+  <p className="text-xs leading-relaxed text-zinc-500">Exemples : npm install · npm install lucide-react · npm install --save-dev typescript · npm run build · npm test. Les serveurs interactifs/dev et le shell système ne sont pas ouverts par ce terminal. Les installations de nouveaux paquets proposent les manifestes à validation. Les autres fichiers modifiés par un script restent dans sa tâche temporaire.</p>
+  {job?.status==='complete'&&job?.proposalCount>0&&<Button disabled={busy||!data.canExecute} onClick={()=>action('review-dependencies',{jobId:job.id})}>Proposer les dépendances dans Modifications</Button>}
+  {notice&&<p role="status" className="rounded-lg border border-violet-500/30 p-3 text-violet-200">{notice}</p>}
+  {data.jobs?.length>0&&<div className="flex flex-wrap gap-2" aria-label="Historique des commandes">{data.jobs.map((j:any)=><button key={j.id} onClick={()=>setSelected(j.id)} className={`max-w-full truncate rounded-lg border px-3 py-2 text-xs ${job?.id===j.id?'border-violet-500 text-violet-200':'border-white/10 text-zinc-400'}`}>{j.command||j.action} · {j.status}</button>)}</div>}
+  <div className="space-y-3 rounded-xl border border-white/10 p-4"><h3 className="font-medium">Lien WebView stable</h3><p className="break-all font-mono text-xs text-violet-300">{typeof window!=='undefined'?window.location.origin:''}/p/{projectId}</p><div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={async()=>{try{await navigator.clipboard.writeText(`${window.location.origin}/p/${projectId}`);setCopied(true);}catch{setNotice('Copie indisponible : sélectionnez le lien.');}}}>{copied?<Check size={14}/>:<Copy size={14}/>} Copier</Button><Button size="sm" onClick={onOpenWebView}>Activer / gérer la WebView</Button></div></div>
+  {data.site&&<div className="space-y-4 rounded-xl border border-white/10 p-4"><h3 className="font-medium">Site publié</h3><a className="flex items-center gap-2 break-all text-violet-300 underline" href={data.site.url} target="_blank" rel="noreferrer">{data.site.url}<ExternalLink size={14}/></a><label className="block">Votre domaine<Input value={domain} onChange={e=>setDomain(e.target.value)} placeholder="app.votre-domaine.com"/></label><div className="flex flex-wrap gap-2"><Button variant="outline" disabled={busy||!domain||!data.canExecute} onClick={()=>action('request')}>Obtenir le TXT</Button><Button disabled={busy||!domain||!data.canExecute} onClick={()=>action('verify')}>Vérifier le domaine</Button></div>{dns&&<div className="break-all text-xs leading-relaxed"><p>TXT : _jojo-verify.{dns.domain}</p><p>Valeur : {dns.token}</p><p>A : {dns.ip}</p><p>{dns.verified?'Domaine vérifié. TLS dépend du proxy configuré.':'Ajoutez ces enregistrements chez votre fournisseur DNS puis vérifiez.'}</p></div>}</div>}
+ </section>;
 }
-
-export const StudioTerminal: FC<StudioTerminalProps> = ({ projectName, projectId }) => {
-    const [activeTab, setActiveTab] = useState<'terminal' | 'output' | 'problems' | 'build'>('terminal');
-    const [installProgress, setInstallProgress] = useState(0);
-    const [isInstalling, setIsInstalling] = useState(false);
-    const [currentPackage, setCurrentPackage] = useState('');
-    const [logs, setLogs] = useState<string[]>([]);
-
-    useEffect(() => {
-        if (isInstalling) {
-            const packages = ['@elite/sdk-core', 'lucide-react', 'framer-motion', 'zod', 'clsx', 'tailwind-merge'];
-            let pkgIndex = 0;
-            
-            const interval = setInterval(() => {
-                setInstallProgress(prev => {
-                    if (prev >= 100) {
-                        clearInterval(interval);
-                        setIsInstalling(false);
-                        setLogs(prevLogs => [...prevLogs, `✓ Installation terminée avec succès.`]);
-                        return 100;
-                    }
-                    
-                    const nextProgress = prev + Math.random() * 15;
-                    if (Math.floor(nextProgress / 20) > Math.floor(prev / 20)) {
-                        const pkg = packages[pkgIndex % packages.length];
-                        setCurrentPackage(pkg);
-                        setLogs(prevLogs => [...prevLogs, `[ELITE-NPM] Extraction de ${pkg}...`]);
-                        pkgIndex++;
-                    }
-                    return nextProgress;
-                });
-            }, 400);
-            return () => clearInterval(interval);
-        }
-    }, [isInstalling]);
-
-    const runInstall = () => {
-        setIsInstalling(true);
-        setInstallProgress(0);
-        setLogs(['[ELITE-NPM] Initialisation du gestionnaire de paquets...', '[ELITE-NPM] Résolution des dépendances...']);
-        setActiveTab('terminal');
-    };
-
-    return (
-        <div className="h-full bg-[#0c0d12] flex flex-col font-mono text-[10px] overflow-hidden border-t border-white/5">
-            {/* Tab Navigation */}
-            <div className="flex gap-4 px-4 pt-2 text-gray-500 border-b border-white/5 pb-2 shrink-0 overflow-x-auto scrollbar-hide">
-                <button onClick={() => setActiveTab('terminal')} className={cn("px-2 py-1 rounded flex items-center gap-1.5 transition-all whitespace-nowrap", activeTab === 'terminal' ? "text-white bg-white/5" : "hover:text-white")}>
-                    <TermIcon className="h-3 w-3" /> TERMINAL
-                </button>
-                <button onClick={() => setActiveTab('problems')} className={cn("px-2 py-1 rounded flex items-center gap-1.5 transition-all whitespace-nowrap", activeTab === 'problems' ? "text-white bg-white/5" : "hover:text-white")}>
-                    <AlertCircle className="h-3 w-3" /> PROBLEMS
-                </button>
-                <button onClick={() => setActiveTab('output')} className={cn("px-2 py-1 rounded flex items-center gap-1.5 transition-all whitespace-nowrap", activeTab === 'output' ? "text-white bg-white/5" : "hover:text-white")}>
-                    <LayoutList className="h-3 w-3" /> OUTPUT
-                </button>
-                <button onClick={() => setActiveTab('build')} className={cn("px-2 py-1 rounded flex items-center gap-1.5 transition-all whitespace-nowrap", activeTab === 'build' ? "text-white bg-white/5" : "hover:text-white")}>
-                    <Cpu className="h-3 w-3" /> EAS BUILD
-                </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 select-text scrollbar-hide space-y-1 bg-black/10">
-                {activeTab === 'terminal' && (
-                    <div className="space-y-1 text-gray-400">
-                        <p><span className="text-blue-400">jojo@elite-studio</span>:<span className="text-green-400">~/project</span>$ {isInstalling ? 'npm install' : ''}</p>
-                        
-                        {logs.map((log, i) => (
-                            <p key={i} className={cn(log.includes('✓') ? "text-green-500 font-bold" : "opacity-80")}>{log}</p>
-                        ))}
-
-                        {isInstalling && (
-                            <div className="mt-3 space-y-2 p-3 bg-black/40 rounded-xl border border-white/5">
-                                <div className="flex items-center justify-between mb-1">
-                                    <span className="text-accent font-black uppercase tracking-widest text-[8px]">Téléchargement : {currentPackage}</span>
-                                    <span className="text-[8px] font-bold">{Math.floor(installProgress)}%</span>
-                                </div>
-                                <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
-                                    <div className="h-full bg-accent transition-all duration-300 shadow-[0_0_10px_rgba(249,115,22,0.5)]" style={{ width: `${installProgress}%` }} />
-                                </div>
-                                <p className="text-[7px] opacity-40 animate-pulse">Synchronisation avec registry.jojoai.com...</p>
-                            </div>
-                        )}
-                        
-                        {!isInstalling && installProgress === 0 && (
-                            <div className="flex flex-col items-center justify-center py-10 opacity-20">
-                                <TermIcon className="h-8 w-8 mb-2" />
-                                <p className="uppercase tracking-[0.3em]">Console Prête</p>
-                            </div>
-                        )}
-                        <div className="h-4 w-2 bg-accent/40 animate-pulse ml-1 inline-block" />
-                    </div>
-                )}
-
-                {activeTab === 'problems' && (
-                    <div className="space-y-3 p-2">
-                        <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
-                            <AlertCircle className="h-4 w-4 text-red-500" />
-                            <div>
-                                <p className="text-red-500 font-black uppercase text-[9px]">Erreur de Rendu</p>
-                                <p className="text-gray-400 text-[8px]">Impossible de résoudre l'importation de '@/components/Button' dans app/page.tsx</p>
-                            </div>
-                        </div>
-                        <p className="text-[8px] text-gray-600 font-bold uppercase tracking-widest px-2 italic">JOJO AI analyse actuellement ce bug pour proposer un correctif...</p>
-                    </div>
-                )}
-
-                {activeTab === 'output' && (
-                    <div className="space-y-1 text-gray-400">
-                        <p className="opacity-40">[08:42:12] Initializing Elite Node v20.14...</p>
-                        <p className="text-white">[Studio] Architecture context loaded (4 files, 1 project).</p>
-                        <p className="text-accent">[GenAI] Connection to Elite Brain established.</p>
-                        <p className="text-blue-400">[Watcher] Hot Module Replacement active.</p>
-                    </div>
-                )}
-
-                {activeTab === 'build' && (
-                    <div className="space-y-4 p-4 text-center">
-                        <div className="h-20 w-20 border-2 border-accent/20 border-t-accent rounded-full animate-spin mx-auto flex items-center justify-center">
-                            <Smartphone className="h-8 w-8 text-accent" />
-                        </div>
-                        <p className="text-blue-400 font-black uppercase tracking-widest">EAS CLOUD BUILD ENGINE</p>
-                        <button onClick={runInstall} className="px-6 py-2 bg-accent text-white rounded-xl font-black text-[9px] uppercase tracking-[0.2em] shadow-lg shadow-accent/20 hover:scale-105 transition-all">Lancer Build APK</button>
-                    </div>
-                )}
-            </div>
-            
-            {/* Action Bar Terminal */}
-            <div className="h-8 border-t border-white/5 bg-black/20 flex items-center px-4 justify-between">
-                <div className="flex items-center gap-4">
-                    <span className="flex items-center gap-1.5 text-[8px] font-bold text-gray-500 uppercase"><Wifi className="h-3 w-3 text-green-500" /> Connecté</span>
-                    <span className="flex items-center gap-1.5 text-[8px] font-bold text-gray-500 uppercase"><Download className="h-3 w-3" /> 12.4 KB/s</span>
-                </div>
-                <button onClick={() => setLogs([])} className="text-gray-600 hover:text-red-400 transition-colors"><Trash2 className="h-3 w-3" /></button>
-            </div>
-        </div>
-    );
-};
