@@ -7,14 +7,13 @@ function completedText(data:any){
  if(!parts.length)throw Error('Aucune proposition de code reçue.');return parts.join('\n');
 }
 /** Official Responses endpoint, streamed proposals; no shell or shared ChatGPT session. */
-export async function openaiCoding(instructions:string,input:CodingMessage[],options?:{apiKey:string;model:string;onProgress?:(text:string)=>Promise<void>}):Promise<string>{
+export async function openaiCoding(instructions:string,input:CodingMessage[],options?:{apiKey:string;model:string;webSearch?:boolean;onProgress?:(text:string)=>Promise<void>}):Promise<string>{
  const key=options?.apiKey||process.env.OPENAI_API_KEY,model=options?.model||process.env.OPENAI_CODEX_MODEL;
  if(!key||!model)throw Error('Configurez OPENAI_API_KEY et OPENAI_CODEX_MODEL côté serveur.');
- const response=await fetch('https://api.openai.com/v1/responses',{
-  method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},
-  body:JSON.stringify({model,instructions,input,store:false,stream:true,max_output_tokens:16384}),
-  redirect:'error',signal:AbortSignal.timeout(90000),cache:'no-store',
- });
+ const base:any={model,instructions,input,store:false,stream:true,max_output_tokens:16384};
+ const call=(body:any)=>fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify(body),redirect:'error',signal:AbortSignal.timeout(options?.webSearch?150000:90000),cache:'no-store'});
+ let response=await call(options?.webSearch?{...base,tools:[{type:'web_search'}]}:base);
+ if(options?.webSearch&&response.status===400){await response.body?.cancel().catch(()=>{});response=await call(base);}
  if(!response.ok)throw Error(response.status===401||response.status===403?'Accès au moteur OpenAI refusé.':response.status===429?'Le moteur OpenAI a atteint son quota.':'Le moteur OpenAI a refusé la génération. Vérifiez le modèle configuré.');
  if(!response.headers.get('content-type')?.includes('text/event-stream'))return completedText(JSON.parse((await limitedBody(response,4*1024*1024)).toString('utf8')));
  const reader=response.body?.getReader();if(!reader)throw Error('Flux OpenAI indisponible.');
