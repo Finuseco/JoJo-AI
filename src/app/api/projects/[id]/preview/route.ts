@@ -12,5 +12,5 @@ export async function GET(_:Request,{params}:{params:{id:string}}){try{
  const {rows}=await db.query('SELECT file_path AS path,file_content AS content,file_encoding AS encoding FROM jojo_ai_project_files WHERE project_id=$1 ORDER BY file_path',[id]);
  let requiresBuild=false;try{requiresBuild=Boolean(JSON.parse(rows.find(f=>f.path==='package.json')?.content||'{}').scripts?.build);}catch{}
  if(/<script[^>]+(?:type=["']module|src=["'][^"']+\.tsx?)/i.test(rows.find(f=>f.path==='index.html'||f.path==='public/index.html')?.content||''))requiresBuild=true;
- return NextResponse.json({files:previewFiles(rows,member),requiresBuild,nativeAndroid:project.app_template==='android'&&!rows.some(f=>f.path==='index.html'||f.path==='public/index.html')},{headers:{'Cache-Control':'private,no-store'}});
+ return NextResponse.json({files:previewFiles(rows,member),requiresBuild,nativeAndroid:['android','react-native'].includes(project.app_template)&&!rows.some(f=>f.path==='index.html'||f.path==='public/index.html')},{headers:{'Cache-Control':'private,no-store'}});
 }catch{return NextResponse.json({error:'Aperçu privé ou projet introuvable.'},{status:403});}}

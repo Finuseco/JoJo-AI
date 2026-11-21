@@ -98,8 +98,8 @@ export async function createJojoAiProject(data: { name: string, description: str
         const defaultFiles = data.template === 'empty' ? [] : starterFiles(data.name, data.template);
         for (const file of defaultFiles) {
             await connection.query(
-                'INSERT INTO jojo_ai_project_files (project_id, file_path, file_content) VALUES ($1, $2, $3)',
-                [pid, file.path, file.content]
+                'INSERT INTO jojo_ai_project_files (project_id, file_path, file_content, file_encoding, file_mode) VALUES ($1, $2, $3, $4, $5)',
+                [pid, file.path, file.content, file.encoding || 'utf8', file.mode || '100644']
             );
         }
 
