@@ -8,7 +8,7 @@ import {requireProject} from '../project-access';
 import {studioChat} from '@/ai/flows/studio-chat-flow';
 import {openaiSettings} from '../openai-settings';
 import {reserveGeneration,refundGeneration,generationBalance} from '../generation-ledger';
-export async function sendChatMessage(projectId:number,message:string,attachments?:{url:string,contentType:string}[],requestId?:string,provider?:AiProvider){
+export async function sendChatMessage(projectId:number,message:string,attachments?:{url:string,contentType:string,name?:string}[],requestId?:string,provider?:AiProvider){
  let reserved=false;const id=requestId||randomUUID();
  try{
   const {user}=await requireProject(projectId);
