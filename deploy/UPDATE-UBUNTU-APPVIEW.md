@@ -97,3 +97,39 @@ fournit déjà ces fonctions, adapter le connecteur à son protocole existant.
   Ce n’est pas un nouveau tableau de bord administrateur.
 - AppView Pixel 7/WebRTC, compilation APK, file de jobs et runtime Node/DB complet
   restent à implémenter et à tester ; cette mise à jour ne les active pas.
+
+## Configuration OnChat retrouvée dans vos dépôts
+
+Source examinée : `Finuseco/cashpay_web`, révision
+`14b1718fe6cf06bdf2d2f4b0c1e68c04abb1651d`.
+
+- [Serveur OnChat](https://github.com/Finuseco/cashpay_web/blob/14b1718fe6cf06bdf2d2f4b0c1e68c04abb1651d/server/onchat/ws-server.js) :
+  `ONCHAT_WS_HOST` par défaut `127.0.0.1`, `ONCHAT_WS_PORT` par défaut `3101`,
+  diagnostic HTTP `/health`, JWT `cashpay-token` ou Bearer côté serveur.
+- [Appels](https://github.com/Finuseco/cashpay_web/blob/14b1718fe6cf06bdf2d2f4b0c1e68c04abb1651d/src/hooks/use-direct-call.ts) et
+  [réunions](https://github.com/Finuseco/cashpay_web/blob/14b1718fe6cf06bdf2d2f4b0c1e68c04abb1651d/src/hooks/use-meet-room.ts) :
+  `NEXT_PUBLIC_ONCHAT_WS_URL` ou `wss://<domaine-de-l’application>/ws`, événements
+  `call.offer`, `call.answer`, `call.ice_candidate` et `meet.signal`.
+- ICE : STUN Google `stun:stun.l.google.com:19302`, TURN configurable par
+  `NEXT_PUBLIC_TURN_URL`, `NEXT_PUBLIC_TURN_USERNAME`, `NEXT_PUBLIC_TURN_CREDENTIAL`.
+  Ces noms existent dans le code ; les valeurs effectives de votre VPS n’ont pas
+  été consultées et ne sont pas nécessaires dans le chat.
+
+Vérification à lancer sur le serveur OnChat si son port n’a pas été personnalisé :
+
+```bash
+curl --fail --max-time 5 http://127.0.0.1:3101/health
+ss -ltn | grep ':3101'
+```
+
+Ne pas ouvrir 3101 directement sur Internet : conserver le reverse proxy WSS
+existant. Le serveur retrouvé relaie la signalisation des appels/réunions ; il
+ne produit pas de vidéo Android. Pour AppView, réutiliser l’infrastructure TURN
+et le déploiement de signalisation avec un canal de sessions Android distinct,
+autorisé par projet. Le JWT utilisateur OnChat et le JWT développeur JoJo AI
+ne doivent pas être supposés interchangeables. Le worker devra émettre le flux
+Android réel et recevoir les commandes dans une session contrôlée. Préférer des
+identifiants TURN temporaires pour les futures sessions AppView plutôt qu’un
+secret durable intégré au JavaScript public.
+
+Aucune modification d’OnChat ni changement de ses ports n’a été effectué.
