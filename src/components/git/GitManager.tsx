@@ -4,7 +4,8 @@ import {Github,Download,Upload,GitCommit,RefreshCw,FolderGit2} from 'lucide-reac
 import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
 interface Repository {name:string;private:boolean;branch:string;canPush:boolean}
-export function GitManager({projectId,onRefresh,hasUnsavedChanges=false}:{projectId:number;onRefresh?:()=>void;hasUnsavedChanges?:boolean}){
+export function GitManager({projectId,projectName='',onRefresh,hasUnsavedChanges=false}:{projectId:number;projectName?:string;onRefresh?:()=>void;hasUnsavedChanges?:boolean}){
+ const [newName,setNewName]=useState(projectName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60)),[newPrivate,setNewPrivate]=useState(true);
  const [data,setData]=useState<any>({}),[repo,setRepo]=useState(''),[branch,setBranch]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[conflicts,setConflicts]=useState<string[]>([]);
  const [repositories,setRepositories]=useState<Repository[]>([]),[page,setPage]=useState(0),[hasMore,setMore]=useState(false),[query,setQuery]=useState('');
  const file=useRef<HTMLInputElement>(null),url=`/api/projects/${projectId}/github`;
@@ -14,7 +15,7 @@ export function GitManager({projectId,onRefresh,hasUnsavedChanges=false}:{projec
  async function execute(action:string,zip?:File){
   if(hasUnsavedChanges){setNotice('Enregistrez les fichiers ouverts avant une opération GitHub ou ZIP.');return;}
   setBusy(true);setNotice('');setConflicts([]);
-  try{const response=await fetch(zip?`/api/projects/${projectId}/archive`:url,{method:'POST',headers:{'Content-Type':zip?'application/zip':'application/json'},body:zip||JSON.stringify({action,repository:repo,branch,message})});
+  try{const response=await fetch(zip?`/api/projects/${projectId}/archive`:url,{method:'POST',headers:{'Content-Type':zip?'application/zip':'application/json'},body:zip||JSON.stringify({action,repository:repo,branch,message,name:newName,private:newPrivate})});
    const result=await response.json();if(!response.ok){setConflicts(result.conflicts||[]);throw Error(result.error);}
    setNotice(result.unchanged?'La branche distante est déjà à jour.':result.synchronized?`Espace synchronisé · ${result.count} fichiers. Vos modifications locales sans conflit sont conservées.`:result.sha?`Commit publié : ${result.sha.slice(0,8)}`:`${result.count} fichiers importés · ${result.skipped||0} fichiers exclus`);
    if(!result.unchanged)onRefresh?.();await refresh();
@@ -32,6 +33,7 @@ export function GitManager({projectId,onRefresh,hasUnsavedChanges=false}:{projec
    <label className="block">Dépôt GitHub<Input value={repo} onChange={e=>setRepo(e.target.value)} placeholder="https://github.com/proprietaire/depot"/></label>
    <label className="block">Branche (facultatif)<Input value={branch} onChange={e=>setBranch(e.target.value)} placeholder="Branche par défaut"/></label>
    <Button disabled={disabled||!repo} onClick={()=>execute('import')}><Download size={16}/> Importer le dépôt</Button>
+   {data.connected&&<div className="space-y-3 rounded-xl border border-violet-400/25 bg-violet-500/5 p-4"><h3 className="flex items-center gap-2 font-medium"><Github size={16}/> Créer un nouveau dépôt et y envoyer ce projet</h3><label className="block">Nom du dépôt<Input value={newName} maxLength={100} onChange={e=>setNewName(e.target.value)} placeholder="mon-application"/></label><label className="flex items-center gap-2"><input type="checkbox" checked={newPrivate} onChange={e=>setNewPrivate(e.target.checked)}/> Dépôt privé</label><Button disabled={disabled||!newName.trim()} onClick={()=>execute('create')}><Upload size={16}/> Créer le dépôt et envoyer le projet</Button><p className="text-xs text-zinc-500">Le dépôt est créé sur votre compte GitHub, autorisé par vous. Les fichiers enregistrés du projet y sont envoyés dans un premier commit.</p></div>}
   </div>}
   <div className="flex flex-wrap gap-2"><Button variant="outline" disabled={disabled} onClick={()=>file.current?.click()}><Upload size={16}/> Importer un ZIP</Button><a className="rounded-md border border-white/20 px-3 py-2" href={`/api/projects/${projectId}/archive`}>Télécharger le ZIP</a><input ref={file} className="hidden" type="file" accept=".zip" onChange={e=>{const f=e.target.files?.[0];if(f)execute('zip',f);}}/></div>
   {data.link&&<div className="space-y-2"><label>Message du commit<Input value={message} maxLength={500} onChange={e=>setMessage(e.target.value)} placeholder="Décrire les modifications enregistrées"/></label><Button disabled={disabled||!message||!data.connected} onClick={()=>execute('push')}><GitCommit size={16}/> Publier le commit</Button><p className="text-xs text-zinc-500">Une branche distante modifiée bloque la publication. Aucun push forcé.</p></div>}

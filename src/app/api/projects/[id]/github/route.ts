@@ -42,6 +42,17 @@ export async function POST(request:Request,{params}:{params:{id:string}}){let lo
   }catch(e){await client.query('ROLLBACK');throw e;}finally{client.release();}
   return NextResponse.json({success:true,synchronized:true,count:merged.files.length,skipped:remote.skipped});
  }
+ if(input.action==='create'){
+  if(!token)throw Error('Connectez GitHub avant de créer un dépôt.');
+  const existing=(await db.query('SELECT 1 FROM jojo_ai_git_links WHERE project_id=$1',[id])).rows[0];if(existing)throw Error('Ce projet est déjà lié à un dépôt GitHub.');
+  const name=String(input.name||'').trim();if(!/^[A-Za-z0-9_.-]{1,100}$/.test(name)||name==='.'||name==='..')throw Error('Nom de dépôt invalide : lettres, chiffres, tiret, point et souligné uniquement.');
+  const {project}=await requireProject(id,true);const description=String(project.description||'').replace(/\s+/g,' ').trim().slice(0,300);
+  const created=await githubApi('/user/repos',token,{name,description:description||undefined,private:input.private!==false,auto_init:true});
+  const repository=String(created.full_name),branch=String(created.default_branch||'main');
+  let initial:any;for(let attempt=0;attempt<4;attempt++){try{initial=await githubApi(`/repos/${repository}/commits/${encodeURIComponent(branch)}`,token);break;}catch(e){if(attempt===3)throw Error('Dépôt créé sur GitHub ('+repository+') mais sa première version n’est pas encore prête. Importez-le depuis la liste, puis publiez.');await new Promise(r=>setTimeout(r,800));}}
+  await db.query('INSERT INTO jojo_ai_git_links(project_id,repository,branch,base_sha) VALUES($1,$2,$3,$4)',[id,repository,branch,initial.sha]);
+  input.action='push';input.message=String(input.message||'').trim()||'Premier envoi depuis JoJo AI';
+ }
  if(input.action==='push'){
   if(!token)throw Error('Connectez GitHub avant de publier un commit.');const {rows}=await db.query('SELECT * FROM jojo_ai_git_links WHERE project_id=$1',[id]);const link=rows[0];if(!link)throw Error('Importez d’abord un dépôt dans ce projet.');
   const message=String(input.message||'').trim();if(!message||message.length>500)throw Error('Message de commit requis (500 caractères maximum).');
