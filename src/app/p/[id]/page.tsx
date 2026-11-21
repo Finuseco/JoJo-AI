@@ -62,9 +62,9 @@ export default function ProjectPreviewPage() {
 
     if (loading) {
         return (
-            <div className="h-screen w-full bg-[#05070a] flex flex-col items-center justify-center text-white">
+            <div className="h-screen w-full bg-[#070620] flex flex-col items-center justify-center text-white">
                 <div className="relative flex items-center justify-center">
-                    <div className="h-32 w-32 border-2 border-accent/20 border-t-accent rounded-full animate-spin shadow-[0_0_40px_rgba(249,115,22,0.2)]" />
+                    <div className="h-32 w-32 border-2 border-accent/20 border-t-accent rounded-full animate-spin shadow-[0_0_40px_rgba(124,58,237,0.35)]" />
                     <div className="absolute inset-0 flex items-center justify-center">
                         <Image src="/logos/icon.png" alt="JOJO" width={60} height={60} className="animate-pulse" />
                     </div>
@@ -79,7 +79,7 @@ export default function ProjectPreviewPage() {
 
     if (error) {
         return (
-            <div className="min-h-screen bg-[#0c0d12] text-white p-10 font-sans flex flex-col items-center justify-center text-center">
+            <div className="min-h-screen bg-[#0c0a2c] text-white p-10 font-sans flex flex-col items-center justify-center text-center">
                 <div className="p-3 rounded-3xl bg-red-500/10 border border-red-500/20 mb-8 shadow-2xl">
                     <XCircle className="h-20 w-20 text-red-500" />
                 </div>

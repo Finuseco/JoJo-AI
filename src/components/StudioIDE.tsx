@@ -40,6 +40,7 @@ import { DatabaseManager } from './databases/DatabaseManager';
 import { GitManager } from './git/GitManager';
 import { AndroidEmulator } from './emulator/AndroidEmulator';
 import { motion, AnimatePresence } from 'framer-motion';
+import { JojoBrand } from './brand/JojoBrand';
 
 export function StudioIDE({ project, session, projects, onProjectSwitch, onProjectDeleted }: any) {
   const { toast } = useToast();
@@ -135,14 +136,14 @@ export function StudioIDE({ project, session, projects, onProjectSwitch, onProje
   const activeTab = openTabs.find(t => t.id === activeTabId);
 
   return (
-    <div className="flex h-screen w-full bg-[#05070a] text-gray-300 font-sans overflow-hidden flex-col select-none relative">
+    <div className="flex h-screen w-full bg-transparent text-gray-300 font-sans overflow-hidden flex-col select-none relative">
         {/* Barra de Menus */}
-        <div className="h-9 bg-[#0c0d12] border-b border-white/5 flex items-center px-2 gap-1 text-[11px] font-bold text-gray-500 z-[100] premium-border">
-            <Image src="/logos/logo1.png" alt="JOJO AI" width={80} height={20} className="mr-4 opacity-80" />
+        <div className="h-9 bg-[#0c0a2c]/70 backdrop-blur-md border-b border-white/5 flex items-center px-2 gap-1 text-[11px] font-bold text-gray-500 z-[100] premium-border">
+            <JojoBrand size={22} className="mr-4 gap-2" />
             
             <DropdownMenu>
                 <DropdownMenuTrigger className="px-3 h-7 hover:bg-white/5 rounded transition-colors uppercase tracking-widest outline-none">Fichier</DropdownMenuTrigger>
-                <DropdownMenuContent className="bg-[#1c1c21] border-white/10 text-white min-w-[200px] glass-panel">
+                <DropdownMenuContent className="bg-[#19153f] border-white/10 text-white min-w-[200px] glass-panel">
                     <DropdownMenuItem className="text-[10px] uppercase font-bold" onClick={() => fetchTreeAndCredits()}>Actualiser</DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => handleSaveFile(activeTab?.id || '', activeTab?.content || '')} className="text-[10px] uppercase font-bold flex justify-between">Sauvegarder <span className="opacity-40">Ctrl+S</span></DropdownMenuItem>
@@ -151,7 +152,7 @@ export function StudioIDE({ project, session, projects, onProjectSwitch, onProje
 
             <DropdownMenu>
                 <DropdownMenuTrigger className="px-3 h-7 hover:bg-white/5 rounded transition-colors uppercase tracking-widest outline-none">Collaboration</DropdownMenuTrigger>
-                <DropdownMenuContent className="bg-[#1c1c21] border-white/10 text-white min-w-[200px] glass-panel">
+                <DropdownMenuContent className="bg-[#19153f] border-white/10 text-white min-w-[200px] glass-panel">
                     <DropdownMenuItem className="text-[10px] uppercase font-bold" onClick={() => { navigator.clipboard.writeText(publicPreviewUrl); toast({ title: "Lien Copié", description: "Lien de visualisation prêt." }); }}>Copier Lien Preview</DropdownMenuItem>
                     <DropdownMenuItem className="text-[10px] uppercase font-bold">Gérer les Accès</DropdownMenuItem>
                 </DropdownMenuContent>
@@ -190,8 +191,8 @@ export function StudioIDE({ project, session, projects, onProjectSwitch, onProje
                     </div>
                 )}
                 {mobileView === 'preview' && (
-                    <div className="h-full w-full bg-[#080a10] flex flex-col overflow-hidden">
-                        <div className="h-10 px-3 bg-[#0c0e17] border-b border-white/10 flex items-center justify-between text-[11px] font-black uppercase text-gray-400 shrink-0">
+                    <div className="h-full w-full bg-[#0a0b2e]/70 flex flex-col overflow-hidden">
+                        <div className="h-10 px-3 bg-[#0e0f34]/80 border-b border-white/10 flex items-center justify-between text-[11px] font-black uppercase text-gray-400 shrink-0">
                             <span className="text-cyan-400 flex items-center gap-2">
                                 <Smartphone className="h-4 w-4" /> Android 14 (Pixel 8 Pro)
                             </span>
@@ -207,10 +208,10 @@ export function StudioIDE({ project, session, projects, onProjectSwitch, onProje
                     </div>
                 )}
                 {mobileView === 'code' && (
-                    <div className="h-full w-full flex flex-col bg-[#05070a]">
-                        <div className="h-9 flex bg-[#0c0d12] border-b border-white/5 overflow-x-auto scrollbar-hide shrink-0">
+                    <div className="h-full w-full flex flex-col bg-[#070620]/60">
+                        <div className="h-9 flex bg-[#0c0a2c]/70 backdrop-blur-md border-b border-white/5 overflow-x-auto scrollbar-hide shrink-0">
                             {openTabs.map(tab => (
-                                <div key={tab.id} onClick={() => setActiveTabId(tab.id)} className={cn("flex items-center px-4 py-2 text-[9px] font-bold border-r border-white/5 cursor-pointer min-w-[120px] transition-all", activeTabId === tab.id ? "bg-[#111114] text-white border-b-2 border-b-accent" : "bg-black/20 text-gray-500 hover:bg-black/40")}>
+                                <div key={tab.id} onClick={() => setActiveTabId(tab.id)} className={cn("flex items-center px-4 py-2 text-[9px] font-bold border-r border-white/5 cursor-pointer min-w-[120px] transition-all", activeTabId === tab.id ? "bg-[#121038] text-white border-b-2 border-b-accent" : "bg-black/20 text-gray-500 hover:bg-black/40")}>
                                     <span className="truncate uppercase">{tab.title}{tab.isDirty && '*'}</span>
                                     <X className="ml-auto h-3 w-3 hover:text-red-400 p-0.5" onClick={(e) => { e.stopPropagation(); setOpenTabs(ts => ts.filter(t => t.id !== tab.id)); if (activeTabId === tab.id) setActiveTabId(null); }} />
                                 </div>
@@ -230,7 +231,7 @@ export function StudioIDE({ project, session, projects, onProjectSwitch, onProje
                 )}
 
                 {/* Mobile Bottom Navigation Bar (3 buttons: Chat, Preview, Code with tag icon) */}
-                <div className="fixed bottom-0 left-0 right-0 h-16 bg-[#0c0d12]/95 backdrop-blur-md border-t border-white/10 flex items-center justify-around z-[200] px-4 shadow-2xl">
+                <div className="fixed bottom-0 left-0 right-0 h-16 bg-[#0c0a2c]/95 backdrop-blur-md border-t border-white/10 flex items-center justify-around z-[200] px-4 shadow-2xl">
                     <button 
                         onClick={() => setMobileView('chat')}
                         className={cn("flex flex-col items-center justify-center flex-1 py-2 transition-colors", mobileView === 'chat' ? "text-accent font-black" : "text-gray-400 hover:text-white")}
@@ -257,7 +258,7 @@ export function StudioIDE({ project, session, projects, onProjectSwitch, onProje
 
             {/* Desktop View Layout (hidden md:flex) */}
             <div className="hidden md:flex flex-1 overflow-hidden relative">
-            <div className="w-12 bg-[#0c0d12] border-r border-white/5 flex flex-col items-center py-4 gap-6 z-50">
+            <div className="w-12 bg-[#0c0a2c]/70 backdrop-blur-md border-r border-white/5 flex flex-col items-center py-4 gap-6 z-50">
                 <div className={cn("p-2 rounded-lg cursor-pointer transition-all", sidebarTab === 'files' ? "text-accent bg-accent/10" : "text-gray-600 hover:text-gray-400")} onClick={() => setSidebarTab('files')}><Files className="h-5 w-5" /></div>
                 <div className={cn("p-2 rounded-lg cursor-pointer transition-all", sidebarTab === 'git' ? "text-accent bg-accent/10" : "text-gray-600 hover:text-gray-400")} onClick={() => setSidebarTab('git')}><Github className="h-5 w-5" /></div>
                 <div className={cn("p-2 rounded-lg cursor-pointer transition-all", sidebarTab === 'db' ? "text-accent bg-accent/10" : "text-gray-600 hover:text-gray-400")} onClick={() => setSidebarTab('db')}><DatabaseZap className="h-5 w-5" /></div>
@@ -265,7 +266,7 @@ export function StudioIDE({ project, session, projects, onProjectSwitch, onProje
             </div>
 
             <PanelGroup direction="horizontal">
-                <Panel defaultSize={20} minSize={15} className="bg-[#0c0d12] border-r border-white/5 glass-panel hidden md:block">
+                <Panel defaultSize={20} minSize={15} className="bg-[#0c0a2c]/70 backdrop-blur-md border-r border-white/5 glass-panel hidden md:block">
                     <AnimatePresence mode="wait">
                         {sidebarTab === 'files' && <FileExplorer fileTree={fileTree} onFileClick={handleFileClick} onRefresh={fetchTreeAndCredits} onCreateItem={(p, t) => createFileSystemItem(project.id, p, t).then((res) => { if (!res.success) console.error('Failed to create file system item:', res.error); fetchTreeAndCredits(); }).catch(err => { console.error('Error creating file system item:', err); })} />}
                         {sidebarTab === 'git' && <GitManager projectId={project.id} />}
@@ -278,10 +279,10 @@ export function StudioIDE({ project, session, projects, onProjectSwitch, onProje
                 <Panel defaultSize={50}>
                     <PanelGroup direction="vertical">
                         <Panel defaultSize={70}>
-                            <div className="h-full flex flex-col bg-[#05070a]">
-                                <div className="h-9 flex bg-[#0c0d12] border-b border-white/5 overflow-x-auto scrollbar-hide shrink-0">
+                            <div className="h-full flex flex-col bg-[#070620]/60">
+                                <div className="h-9 flex bg-[#0c0a2c]/70 backdrop-blur-md border-b border-white/5 overflow-x-auto scrollbar-hide shrink-0">
                                     {openTabs.map(tab => (
-                                        <div key={tab.id} onClick={() => setActiveTabId(tab.id)} className={cn("flex items-center px-4 py-2 text-[9px] font-bold border-r border-white/5 cursor-pointer min-w-[120px] transition-all", activeTabId === tab.id ? "bg-[#111114] text-white border-b-2 border-b-accent" : "bg-black/20 text-gray-500 hover:bg-black/40")}>
+                                        <div key={tab.id} onClick={() => setActiveTabId(tab.id)} className={cn("flex items-center px-4 py-2 text-[9px] font-bold border-r border-white/5 cursor-pointer min-w-[120px] transition-all", activeTabId === tab.id ? "bg-[#121038] text-white border-b-2 border-b-accent" : "bg-black/20 text-gray-500 hover:bg-black/40")}>
                                             <span className="truncate uppercase">{tab.title}{tab.isDirty && '*'}</span>
                                             <X className="ml-auto h-3 w-3 hover:text-red-400 p-0.5" onClick={(e) => { e.stopPropagation(); setOpenTabs(ts => ts.filter(t => t.id !== tab.id)); if (activeTabId === tab.id) setActiveTabId(null); }} />
                                         </div>
@@ -300,8 +301,8 @@ export function StudioIDE({ project, session, projects, onProjectSwitch, onProje
                                         </Panel>
                                         <PanelResizeHandle className="w-px bg-white/5" />
                                         <Panel defaultSize={40}>
-                                            <div className="h-full bg-[#080a10] flex flex-col border-l border-white/5 overflow-hidden">
-                                                <div className="h-8 px-3 bg-[#0c0e17] border-b border-white/10 flex items-center justify-between text-[10px] font-black uppercase text-gray-400 shrink-0">
+                                            <div className="h-full bg-[#0a0b2e]/70 flex flex-col border-l border-white/5 overflow-hidden">
+                                                <div className="h-8 px-3 bg-[#0e0f34]/80 border-b border-white/10 flex items-center justify-between text-[10px] font-black uppercase text-gray-400 shrink-0">
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-cyan-400 flex items-center gap-1.5 font-bold tracking-wider">
                                                             {previewDevice === 'mobile' ? <Smartphone className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
@@ -372,7 +373,7 @@ export function StudioIDE({ project, session, projects, onProjectSwitch, onProje
             </PanelGroup>
         </div>
 
-        <div className="h-6 bg-[#0c0d12] text-gray-500 flex items-center justify-between px-3 text-[9px] font-bold uppercase tracking-widest z-50 premium-border">
+        <div className="h-6 bg-[#0c0a2c]/70 backdrop-blur-md text-gray-500 flex items-center justify-between px-3 text-[9px] font-bold uppercase tracking-widest z-50 premium-border">
             <div className="flex items-center gap-5">
                 <div className="flex items-center gap-2 bg-white/5 px-2 py-0.5 rounded text-white"><GitBranch className="h-3 w-3 text-accent" /> main</div>
                 <div className="flex items-center gap-2"><Activity className="h-3 w-3" /> CPU: 12% | RAM: 1.2GB</div>

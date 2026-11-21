@@ -5,44 +5,149 @@
 
 @layer base {
   :root {
-    --background: 240 10% 3.9%;
+    /* Palette JoJo AI : marine profond, violet, cyan */
+    --background: 243 60% 7%;
     --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
+    --card: 243 55% 9%;
     --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
+    --popover: 243 55% 9%;
     --popover-foreground: 0 0% 98%;
-    --primary: 260 100% 11%;
+    --primary: 262 83% 58%;
     --primary-foreground: 0 0% 98%;
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 190 100% 50%;
+    --muted: 243 40% 16%;
+    --muted-foreground: 240 15% 70%;
+    --accent: 262 83% 58%;
     --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 260 100% 50%;
+    --border: 245 40% 20%;
+    --input: 245 40% 20%;
+    --ring: 262 83% 62%;
     --radius: 0.75rem;
+
+    --jojo-violet: #7c3aed;
+    --jojo-violet-light: #a855f7;
+    --jojo-pink: #e879f9;
+    --jojo-cyan: #22d3ee;
+    --jojo-cyan-light: #67e8f9;
+    --jojo-navy: #070620;
   }
 }
- 
+
 @layer base {
   * {
     border-color: hsl(var(--border) / 0.5);
   }
   body {
-    background-color: #05070a;
+    background-color: var(--jojo-navy);
     color: hsl(var(--foreground));
     -webkit-font-smoothing: antialiased;
-    background-image: radial-gradient(circle at 50% 50%, rgba(138, 43, 226, 0.08) 0%, transparent 60%),
-                      radial-gradient(circle at 0% 0%, rgba(0, 242, 255, 0.05) 0%, transparent 40%);
+    background-image: linear-gradient(155deg, #0b0a33 0%, #150f4f 42%, #0a2466 100%);
     background-attachment: fixed;
   }
 }
 
-/* Bordure Fluide Animée (Style Google/Elite) */
+/* ------------------------------------------------------------------ */
+/* Fonds animés (halos + trame), repris des affiches JoJo AI           */
+/* ------------------------------------------------------------------ */
+.jojo-aurora {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.jojo-aurora::before,
+.jojo-aurora::after {
+  content: '';
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(40px);
+}
+
+.jojo-aurora::before {
+  left: -20%;
+  top: -30%;
+  width: 70vmax;
+  height: 70vmax;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.5) 0%, rgba(168, 85, 247, 0) 68%);
+  animation: aurora-violet 18s ease-in-out infinite;
+}
+
+.jojo-aurora::after {
+  right: -25%;
+  bottom: -35%;
+  width: 75vmax;
+  height: 75vmax;
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.38) 0%, rgba(34, 211, 238, 0) 66%);
+  animation: aurora-cyan 22s ease-in-out infinite;
+}
+
+.jojo-grid {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 54px 54px;
+  animation: grid-drift 30s linear infinite;
+}
+
+@keyframes aurora-violet {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(12%, 10%) scale(1.15); }
+}
+
+@keyframes aurora-cyan {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-12%, -8%) scale(1.12); }
+}
+
+@keyframes grid-drift {
+  from { background-position: 0 0, 0 0; }
+  to { background-position: 54px 54px, 54px 54px; }
+}
+
+/* Texte dégradé cyan -> violet -> rose */
+.gradient-text {
+  background: linear-gradient(90deg, #67e8f9 0%, #a5b4fc 50%, #e879f9 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  background-size: 200% 100%;
+  animation: gradient-shift 8s ease-in-out infinite;
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Bouton principal dégradé violet */
+.btn-jojo {
+  background: linear-gradient(90deg, #5b21b6 0%, #7c3aed 55%, #4f46e5 100%);
+  background-size: 200% 100%;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 10px 30px rgba(91, 33, 182, 0.5);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-position 0.4s ease;
+}
+
+.btn-jojo:hover {
+  background-position: 100% 0;
+  box-shadow: 0 12px 38px rgba(124, 58, 237, 0.65);
+}
+
+.btn-jojo:active {
+  transform: scale(0.97);
+}
+
+/* Bordure Fluide Animée */
 .premium-border {
   position: relative;
 }
@@ -54,10 +159,10 @@
   left: 0;
   width: 100%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, #4b0082, #8a2be2, #00f2ff, #8a2be2, #4b0082, transparent);
+  background: linear-gradient(90deg, transparent, #5b21b6, #a855f7, #22d3ee, #a855f7, #5b21b6, transparent);
   background-size: 200% 100%;
   animation: fluid-glow 6s linear infinite;
-  opacity: 0.8;
+  opacity: 0.9;
 }
 
 @keyframes fluid-glow {
@@ -67,11 +172,22 @@
 
 /* Effet Verre */
 .glass-panel {
-  background: rgba(12, 13, 18, 0.75);
+  background: rgba(16, 12, 62, 0.62);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(138, 43, 226, 0.15);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  border: 1px solid rgba(168, 85, 247, 0.22);
+  box-shadow: 0 8px 32px 0 rgba(4, 3, 30, 0.45);
+}
+
+/* Carte de projet : halo violet au survol */
+.jojo-card {
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.jojo-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(168, 85, 247, 0.6);
+  box-shadow: 0 18px 50px rgba(91, 33, 182, 0.4);
 }
 
 /* Spinner avec Logo Central */
@@ -82,6 +198,122 @@
 
 .owl-spinner {
   animation: spin-slow 2s linear infinite;
+  border-image: none;
+}
+
+/* Logo qui respire */
+@keyframes owl-glow {
+  0%, 100% { box-shadow: 0 0 24px rgba(99, 102, 241, 0.45); transform: translateY(0); }
+  50% { box-shadow: 0 0 48px rgba(168, 85, 247, 0.8); transform: translateY(-4px); }
+}
+
+.owl-glow {
+  animation: owl-glow 3.5s ease-in-out infinite;
+}
+
+/* ------------------------------------------------------------------ */
+/* Chat : bulles, indicateur de frappe, barre de progression          */
+/* ------------------------------------------------------------------ */
+.chat-bubble-user {
+  background: linear-gradient(135deg, #6d28d9, #8b5cf6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 30px rgba(109, 40, 217, 0.4);
+}
+
+.chat-bubble-ai {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(168, 85, 247, 0.28);
+  box-shadow: 0 10px 30px rgba(4, 3, 30, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.chat-input {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.chat-input:focus-within {
+  border-color: rgba(34, 211, 238, 0.7);
+  box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.15), 0 14px 44px rgba(0, 0, 0, 0.35);
+}
+
+.btn-send {
+  background: linear-gradient(135deg, #22d3ee, #7c3aed);
+  color: #ffffff;
+  box-shadow: 0 6px 22px rgba(34, 211, 238, 0.5);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-send:hover:not(:disabled) {
+  transform: scale(1.06);
+  box-shadow: 0 8px 28px rgba(34, 211, 238, 0.7);
+}
+
+.btn-send:disabled {
+  opacity: 0.45;
+}
+
+/* Trois points « JoJo réfléchit » */
+.typing-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #22d3ee, #e879f9);
+  animation: typing-bounce 1.2s ease-in-out infinite;
+}
+
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30% { transform: translateY(-6px); opacity: 1; }
+}
+
+/* Barre de progression avec reflet */
+.progress-shimmer {
+  background: linear-gradient(90deg, #22d3ee, #a855f7, #e879f9, #22d3ee);
+  background-size: 300% 100%;
+  animation: shimmer 2.4s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 300% 0%; }
+}
+
+/* Curseur de frappe */
+.typing-caret {
+  display: inline-block;
+  width: 6px;
+  height: 14px;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #22d3ee, #e879f9);
+  animation: caret-blink 0.9s steps(1) infinite;
+}
+
+@keyframes caret-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jojo-aurora::before,
+  .jojo-aurora::after,
+  .jojo-grid,
+  .gradient-text,
+  .owl-glow,
+  .typing-dot,
+  .progress-shimmer,
+  .typing-caret,
+  .premium-border::after {
+    animation: none;
+  }
 }
 
 /* Code Editor Styling */

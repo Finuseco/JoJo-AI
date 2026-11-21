@@ -53,7 +53,7 @@ export const DatabaseManager: FC<{ projectId: number }> = ({ projectId }) => {
 
     if (view === 'create') {
         return (
-            <div className="flex flex-col h-full bg-[#16161a] p-6 space-y-6 overflow-y-auto scrollbar-hide">
+            <div className="flex flex-col h-full bg-[#15123b] p-6 space-y-6 overflow-y-auto scrollbar-hide">
                 <h2 className="text-lg font-black text-white uppercase tracking-tighter flex items-center gap-2"><Plus className="h-5 w-5 text-accent" /> CONFIGURATION MANUELLE</h2>
                 <div className="flex gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
                     <button className={cn("flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all", dbType === 'pg' ? "bg-accent text-white shadow-lg" : "text-gray-500")} onClick={() => setDbType('pg')}>PostgreSQL</button>
@@ -89,7 +89,7 @@ export const DatabaseManager: FC<{ projectId: number }> = ({ projectId }) => {
 
     if (view === 'sql') {
         return (
-            <div className="flex flex-col h-full bg-[#16161a] p-6 space-y-6">
+            <div className="flex flex-col h-full bg-[#15123b] p-6 space-y-6">
                 <div className="flex items-center justify-between">
                     <h2 className="text-lg font-black text-white uppercase tracking-tighter flex items-center gap-2"><Terminal className="h-5 w-5 text-accent" /> SQL RUNNER</h2>
                     <span className="text-[8px] font-black text-accent bg-accent/10 px-2 py-0.5 rounded-full uppercase tracking-widest border border-accent/20">{selectedDb?.name}</span>
@@ -114,7 +114,7 @@ export const DatabaseManager: FC<{ projectId: number }> = ({ projectId }) => {
     }
 
     return (
-        <div className="flex flex-col h-full bg-[#16161a] p-6 space-y-8 overflow-y-auto scrollbar-hide">
+        <div className="flex flex-col h-full bg-[#15123b] p-6 space-y-8 overflow-y-auto scrollbar-hide">
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-xl font-black text-white flex items-center gap-3 uppercase tracking-tighter"><DatabaseZap className="h-6 w-6 text-accent" /> GESTION DB ELITE</h2>

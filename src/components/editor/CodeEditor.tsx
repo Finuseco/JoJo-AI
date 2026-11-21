@@ -67,7 +67,7 @@ export const CodeEditor: FC<CodeEditorProps> = ({ content, onChange, filePath, o
     };
 
     return (
-        <div className="flex-1 flex h-full overflow-hidden editor-container bg-[#111114]">
+        <div className="flex-1 flex h-full overflow-hidden editor-container bg-[#121038]">
             {/* Professional Gutter */}
             <div className="font-mono text-[11px] min-w-[45px] select-none scrollbar-hide overflow-hidden bg-black/20 border-r border-white/5 py-5 text-right pr-4">
                 {lines.map((_, i) => (

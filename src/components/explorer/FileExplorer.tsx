@@ -77,7 +77,7 @@ export const FileExplorer: FC<FileExplorerProps> = ({ fileTree, onFileClick, onR
     };
 
     return (
-        <div className="w-full h-full bg-[#16161a] flex flex-col select-none overflow-hidden border-r border-white/5">
+        <div className="w-full h-full bg-[#15123b] flex flex-col select-none overflow-hidden border-r border-white/5">
             {/* Header Pro Explorer */}
             <div className="h-11 px-4 flex items-center justify-between text-[10px] font-black uppercase text-gray-500 border-b border-white/5 tracking-widest bg-black/10">
                 <span className="flex items-center gap-2"><ListTree className="h-3.5 w-3.5" /> Architecture</span>

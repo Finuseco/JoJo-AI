@@ -27,7 +27,7 @@ export const GitManager: FC<{ projectId: number }> = ({ projectId }) => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-[#111114] p-5 space-y-6 overflow-y-auto scrollbar-hide">
+        <div className="flex flex-col h-full bg-[#121038] p-5 space-y-6 overflow-y-auto scrollbar-hide">
             <div className="flex items-center justify-between">
                 <h2 className="text-[11px] font-black text-white uppercase tracking-widest flex items-center gap-2">
                     <GitBranch className="h-4 w-4 text-accent" /> Source Control

@@ -21,6 +21,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { JojoBrand } from '@/components/brand/JojoBrand';
 
 function DashboardContent() {
   const { toast } = useToast();
@@ -145,14 +146,14 @@ function DashboardContent() {
 
   if (loading) {
     return (
-      <div className="flex h-screen w-full flex-col items-center justify-center bg-[#05070a] text-white overflow-hidden">
+      <div className="flex h-screen w-full flex-col items-center justify-center text-white overflow-hidden">
         <div className="relative flex items-center justify-center">
-            <div className="absolute h-32 w-32 border-2 border-accent/20 border-t-accent rounded-full owl-spinner shadow-[0_0_40px_rgba(249,115,22,0.2)]" />
+            <div className="absolute h-36 w-36 border-2 border-purple-400/20 border-t-cyan-300 rounded-full owl-spinner shadow-[0_0_50px_rgba(168,85,247,0.35)]" />
             <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.5 }} className="relative z-10">
-                <Image src="/logos/icon.png" alt="JOJO AI" width={80} height={80} className="rounded-2xl" />
+                <Image src="/logos/icon.png" alt="JoJo AI" width={84} height={84} className="rounded-[22%] owl-glow" />
             </motion.div>
         </div>
-        <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent mt-16 animate-pulse">Synchronisation Elite Studio...</p>
+        <p className="gradient-text text-xs font-bold uppercase tracking-[0.4em] mt-16 animate-pulse">Chargement de JoJo AI...</p>
       </div>
     );
   }
@@ -162,35 +163,44 @@ function DashboardContent() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#05070a] text-white p-6 md:p-12 relative overflow-hidden">
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-blue-900/10 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-purple-900/10 blur-[120px] rounded-full" />
-      </div>
-
+    <div className="min-h-screen w-full text-white p-6 md:p-12 relative overflow-hidden">
       <div className="max-w-7xl mx-auto space-y-12 relative z-10">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-1">
-             <div className="flex items-center gap-4">
-                <Image src="/logos/logo1.png" alt="JOJO AI ELITE" width={140} height={35} priority />
-                <div className="h-6 w-px bg-white/10 mx-2" />
-                <h1 className="text-2xl font-black uppercase tracking-tighter">Elite Studio</h1>
-             </div>
-             <p className="text-gray-500 font-bold uppercase text-[9px] tracking-[0.25em] ml-1">
-                Bienvenue, {session?.user.manager_name} • {projects.length} Architectures actives
-             </p>
-          </div>
-          
+          <JojoBrand size={56} />
           <div className="flex items-center gap-3">
              <div className="relative group hidden md:block">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-500 group-focus-within:text-accent transition-colors" />
-                <Input placeholder="RECHERCHER UN PROJET..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="h-9 w-64 bg-black/40 border-white/10 rounded-xl pl-10 text-[10px] font-bold uppercase tracking-widest focus:border-accent/50" />
+                <Search className="absolute left-3.5 top-3 h-4 w-4 text-gray-400 group-focus-within:text-cyan-300 transition-colors" />
+                <Input placeholder="Rechercher un projet..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="h-10 w-64 bg-white/10 border-white/20 rounded-full pl-10 text-sm focus:border-cyan-300/70" />
              </div>
-             <Button onClick={() => setView('create')} className="h-9 px-6 bg-accent hover:bg-accent/90 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg transition-all active:scale-95">
-                <Plus className="h-4 w-4 mr-2" /> Nouveau Projet
+             <Button onClick={() => setView('create')} className="btn-jojo h-10 px-6 rounded-full font-semibold text-sm">
+                <Plus className="h-4 w-4 mr-2" /> Nouveau projet
              </Button>
           </div>
         </div>
+
+        {view === 'dashboard' && (
+          <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="text-center space-y-5 py-6 md:py-10">
+            <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-purple-500 px-5 py-2 text-sm font-semibold shadow-[0_8px_28px_rgba(124,58,237,0.5)]">
+              <span className="h-2.5 w-2.5 rounded-full bg-cyan-300 shadow-[0_0_12px_#22d3ee] animate-pulse" />
+              Bienvenue, {session?.user.manager_name}
+            </span>
+            <h1 className="font-bold tracking-tight text-4xl md:text-6xl leading-[1.05]" style={{ fontFamily: 'var(--font-display), system-ui, sans-serif' }}>
+              Chattez avec <span className="gradient-text">JoJo AI</span>
+            </h1>
+            <p className="mx-auto max-w-2xl text-lg md:text-xl font-semibold text-cyan-300" style={{ fontFamily: 'var(--font-display), system-ui, sans-serif' }}>
+              Expliquez-lui votre idée, il la réalise à votre place en quelques secondes.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <Button onClick={() => setView('create')} className="btn-jojo h-12 px-8 rounded-full text-base font-semibold">
+                <Wand2 className="h-5 w-5 mr-2" /> Créer une application
+              </Button>
+              <span className="rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm font-medium backdrop-blur">
+                100 crédits offerts par jour
+              </span>
+            </div>
+            <p className="text-xs font-medium text-gray-400">{projects.length} projet{projects.length > 1 ? 's' : ''} actif{projects.length > 1 ? 's' : ''}</p>
+          </motion.section>
+        )}
 
         <AnimatePresence mode="wait">
             {view === 'dashboard' ? (
@@ -202,7 +212,7 @@ function DashboardContent() {
                         </div>
                     ) : (
                         filteredProjects.map((p, i) => (
-                            <motion.div key={p.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.05 }} className="group relative p-6 rounded-3xl bg-black/40 border border-white/5 hover:border-accent/40 transition-all cursor-pointer shadow-xl overflow-hidden glass-panel">
+                            <motion.div key={p.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.05 }} className="jojo-card group relative p-6 rounded-3xl cursor-pointer overflow-hidden glass-panel">
                                 <div onClick={() => setActiveProject(p)}>
                                     <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <ArrowRight className="h-5 w-5 text-accent" />
@@ -240,7 +250,7 @@ function DashboardContent() {
                 </motion.div>
             ) : (
                 <motion.div key="create" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="max-w-2xl mx-auto">
-                    <Card className="bg-[#0c0d12] border-white/10 shadow-2xl rounded-3xl overflow-hidden glass-panel">
+                    <Card className="bg-[#0c0a2c] border-white/10 shadow-2xl rounded-3xl overflow-hidden glass-panel">
                         <CardHeader className="p-8 pb-4">
                             <CardTitle className="text-2xl font-black uppercase tracking-tighter text-white">Nouvelle Vision</CardTitle>
                             <CardDescription className="text-gray-500 uppercase font-bold text-[9px] tracking-widest mt-1">L'IA déploiera l'architecture complète automatiquement.</CardDescription>
@@ -256,7 +266,7 @@ function DashboardContent() {
                                         <label className="text-[9px] font-black text-gray-500 uppercase tracking-widest ml-1">Architecture Modèle</label>
                                         <Select value={appTemplate} onValueChange={setAppTemplate}>
                                             <SelectTrigger className="h-11 bg-black/40 border-white/10 rounded-xl"><SelectValue /></SelectTrigger>
-                                            <SelectContent className="bg-[#16161a] border-white/10 text-white">
+                                            <SelectContent className="bg-[#15123b] border-white/10 text-white">
                                                 <SelectItem value="android" className="text-[10px] font-bold uppercase"><div className="flex items-center gap-2"><Smartphone className="h-3.5 w-3.5 text-cyan-400" /> Android 14 Mobile (Émulateur Pixel 8)</div></SelectItem>
                                                 <SelectItem value="react" className="text-[10px] font-bold uppercase"><div className="flex items-center gap-2"><Globe className="h-3.5 w-3.5 text-blue-400" /> React / Next.js Web</div></SelectItem>
                                                 <SelectItem value="shoelace-ts" className="text-[10px] font-bold uppercase"><div className="flex items-center gap-2"><BrainCircuit className="h-3.5 w-3.5 text-amber-400" /> TypeScript & Shoelace HTML5</div></SelectItem>
@@ -272,7 +282,7 @@ function DashboardContent() {
                                 </div>
                                 <div className="flex gap-3 pt-4">
                                     <Button type="button" variant="ghost" onClick={() => setView('dashboard')} className="flex-1 h-11 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-500">Annuler</Button>
-                                    <Button type="submit" disabled={isGenerating} className="flex-[2] h-11 bg-accent hover:bg-accent/90 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl">
+                                    <Button type="submit" disabled={isGenerating} className="btn-jojo flex-[2] h-11 rounded-full font-semibold text-sm">
                                         {isGenerating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Wand2 className="h-4 w-4 mr-2" />}
                                         Matérialiser
                                     </Button>
@@ -285,7 +295,7 @@ function DashboardContent() {
         </AnimatePresence>
 
         <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
-            <DialogContent className="bg-[#0c0d12] border-white/10 text-white glass-panel rounded-3xl">
+            <DialogContent className="bg-[#0c0a2c] border-white/10 text-white glass-panel rounded-3xl">
                 <DialogHeader>
                     <DialogTitle className="text-xl font-black uppercase tracking-tighter">Partager l'Architecture</DialogTitle>
                     <DialogDescription className="text-gray-500 uppercase font-bold text-[9px] tracking-widest mt-1">Invitez un collaborateur Elite à contribuer sur {invitingProject?.name}.</DialogDescription>
@@ -301,7 +311,7 @@ function DashboardContent() {
                 </div>
                 <DialogFooter>
                     <Button variant="ghost" onClick={() => setInviteDialogOpen(false)} className="h-11 rounded-xl text-[10px] font-black uppercase text-gray-500">Annuler</Button>
-                    <Button onClick={handleInvite} disabled={isInviting} className="h-11 px-8 bg-accent rounded-xl text-white font-black text-[10px] uppercase">
+                    <Button onClick={handleInvite} disabled={isInviting} className="btn-jojo h-11 px-8 rounded-full font-semibold text-sm">
                         {isInviting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Share2 className="h-4 w-4 mr-2" />}
                         Inviter
                     </Button>
@@ -316,8 +326,8 @@ function DashboardContent() {
 export default function DashboardPage() {
   return (
     <Suspense fallback={
-      <div className="flex h-screen w-full flex-col items-center justify-center bg-[#05070a] text-white overflow-hidden">
-        <p className="text-[10px] font-black uppercase tracking-[0.5em] text-accent animate-pulse">Chargement...</p>
+      <div className="flex h-screen w-full flex-col items-center justify-center text-white overflow-hidden">
+        <p className="gradient-text text-xs font-bold uppercase tracking-[0.4em] animate-pulse">Chargement...</p>
       </div>
     }>
       <DashboardContent />

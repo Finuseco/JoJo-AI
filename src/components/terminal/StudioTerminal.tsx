@@ -53,7 +53,7 @@ export const StudioTerminal: FC<StudioTerminalProps> = ({ projectName, projectId
     };
 
     return (
-        <div className="h-full bg-[#0c0d12] flex flex-col font-mono text-[10px] overflow-hidden border-t border-white/5">
+        <div className="h-full bg-[#0c0a2c] flex flex-col font-mono text-[10px] overflow-hidden border-t border-white/5">
             {/* Tab Navigation */}
             <div className="flex gap-4 px-4 pt-2 text-gray-500 border-b border-white/5 pb-2 shrink-0 overflow-x-auto scrollbar-hide">
                 <button onClick={() => setActiveTab('terminal')} className={cn("px-2 py-1 rounded flex items-center gap-1.5 transition-all whitespace-nowrap", activeTab === 'terminal' ? "text-white bg-white/5" : "hover:text-white")}>
@@ -86,7 +86,7 @@ export const StudioTerminal: FC<StudioTerminalProps> = ({ projectName, projectId
                                     <span className="text-[8px] font-bold">{Math.floor(installProgress)}%</span>
                                 </div>
                                 <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
-                                    <div className="h-full bg-accent transition-all duration-300 shadow-[0_0_10px_rgba(249,115,22,0.5)]" style={{ width: `${installProgress}%` }} />
+                                    <div className="h-full bg-accent transition-all duration-300 shadow-[0_0_10px_rgba(124,58,237,0.55)]" style={{ width: `${installProgress}%` }} />
                                 </div>
                                 <p className="text-[7px] opacity-40 animate-pulse">Synchronisation avec registry.jojoai.com...</p>
                             </div>
