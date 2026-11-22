@@ -1,5 +1,7 @@
+import blogTemplate from './templates/blog.json';
 import nativeTemplate from './templates/react-native-android.json';
 export function starterFiles(name:string,template:string):{path:string,content:string,encoding?:string,mode?:string}[]{
+ if(template==='blog')return [...blogTemplate,{path:'site.json',content:JSON.stringify({name,description:'Articles et actualités de notre rédaction.'},null,2)}];
  const safe=name.replace(/[<>&"']/g,'');
  if(template==='android')return [
   {path:'settings.gradle.kts',content:'pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }\ndependencyResolutionManagement { repositories { google(); mavenCentral() } }\nrootProject.name="JojoApp"\ninclude(":app")'},

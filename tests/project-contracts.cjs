@@ -22,3 +22,21 @@ test('React Native creates actual native sources and preserves the Gradle wrappe
  assert.equal(map.has('android/app/debug.keystore'),false);
  assert.ok(map.get('android/app/build.gradle').content.includes('debuggableVariants = []'));
 });
+const {fileTechnology,projectTypes}=require('../src/lib/technology-icons.ts');
+test('technology mapping distinguishes code, manifests and project templates',()=>{
+ for(const [path,expected] of Object.entries({'src/app.ts':'typescript','src/App.tsx':'react','INDEX.HTML':'html5','package-lock.json':'npm','Dockerfile':'docker','schema.sql':'database','unknown.xyz':'code'}))assert.equal(fileTechnology(path),expected);
+ assert.ok(projectTypes.some(t=>t.id==='blog'));assert.ok(projectTypes.some(t=>t.id==='react-native'));
+ for(const entry of projectTypes)assert.ok(entry.label&&entry.detail&&entry.icon);
+});
+test('blog builds real pages, excludes drafts, escapes content and rejects unsafe slugs',t=>{
+ const os=require('node:os'),path=require('node:path'),{spawnSync}=require('node:child_process');
+ const folder=fs.mkdtempSync(path.join(os.tmpdir(),'jojo-blog-'));t.after(()=>fs.rmSync(folder,{recursive:true,force:true}));
+ for(const f of starterFiles('Journal <test>','blog')){const dest=path.join(folder,f.path);fs.mkdirSync(path.dirname(dest),{recursive:true});fs.writeFileSync(dest,f.content);}
+ const build=()=>spawnSync(process.execPath,['scripts/build.cjs'],{cwd:folder,encoding:'utf8'});
+ assert.equal(build().status,0);assert.match(fs.readFileSync(path.join(folder,'dist/index.html'),'utf8'),/Aucun article publié/);
+ const articles=[{slug:'premier-article',title:'Titre <script>',content:'Texte <script>alert(1)</script>',published:true},{slug:'brouillon',title:'Brouillon secret',content:'Non publié',published:false}];
+ fs.writeFileSync(path.join(folder,'content/articles.json'),JSON.stringify(articles));assert.equal(build().status,0);
+ const article=fs.readFileSync(path.join(folder,'dist/articles/premier-article/index.html'),'utf8');assert.ok(article.includes('&lt;script&gt;'));assert.ok(!article.includes('<script>alert'));
+ assert.equal(fs.existsSync(path.join(folder,'dist/articles/brouillon')),false);
+ articles[0].slug='../escape';fs.writeFileSync(path.join(folder,'content/articles.json'),JSON.stringify(articles));assert.notEqual(build().status,0);
+});

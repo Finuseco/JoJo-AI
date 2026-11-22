@@ -85,7 +85,7 @@ export async function createJojoAiProject(data: { name: string, description: str
         const session = await getJojoAiSession();
         if (!session.success || !session.user) throw new Error("Authentification Elite requise.");
 
-        if(typeof data.name!=='string'||!data.name.trim()||data.name.length>120||typeof data.description!=='string'||data.description.length>5000||!['empty','android','react','react-native','web','music','video','fintech','ecommerce'].includes(data.template))throw new Error('Nom ou description invalide.');
+        if(typeof data.name!=='string'||!data.name.trim()||data.name.length>120||typeof data.description!=='string'||data.description.length>5000||!['empty','android','react','react-native','web','blog','music','video','fintech','ecommerce'].includes(data.template))throw new Error('Nom ou description invalide.');
         await connection.query('BEGIN');
         await connection.query('SELECT id FROM dev_portal_users WHERE id=$1 FOR UPDATE',[session.user.id]);
         if(Number((await connection.query('SELECT COUNT(*)::int AS count FROM jojo_ai_projects WHERE dev_portal_user_id=$1',[session.user.id])).rows[0].count)>=50)throw new Error('Limite de 50 projets atteinte.');
