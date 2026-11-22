@@ -14,8 +14,8 @@ export function previewFiles(rows:PreviewFile[],member:boolean){
  const queue=[map.get('index.html')||map.get('public/index.html')].filter(Boolean) as PreviewFile[];
  while(queue.length){const file=queue.shift()!;if(selected.has(file.path))continue;selected.set(file.path,file);
   if(file.encoding!=='utf8'||! /\.(html|css|js)$/.test(file.path))continue;
-  const refs=[...file.content.matchAll(/(?:src|href|poster)\s*=\s*["']([^"']+)["']|url\(\s*["']?([^)'"\s]+)|(?:from\s*|import\s*\()\s*["']([^"']+)["']/g)];
-  for(const ref of refs){const path=resolvePreviewAsset(file.path,ref[1]||ref[2]||ref[3]),target=path&&(map.get(path)||map.get('public/'+path));if(target&&!selected.has(target.path))queue.push(target);}
+  const refs=[...file.content.matchAll(/(?:src|href|poster)\s*=\s*["']([^"']+)["']|url\(\s*["']?([^)'"\s]+)|(?:from\s*|import\s*\()\s*["']([^"']+)["']|fetch\(\s*["']([^"']+)["']/g)];
+  for(const ref of refs){const path=resolvePreviewAsset(file.path,ref[1]||ref[2]||ref[3]||ref[4]),target=path&&(map.get(path)||map.get('public/'+path));if(target&&!selected.has(target.path))queue.push(target);}
  }
  return [...selected.values()];
 }
