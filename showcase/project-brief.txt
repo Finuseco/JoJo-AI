@@ -1,0 +1,39 @@
+JOJO AI — MY PROJECT BRIEF
+
+Paste the completed brief into your project chat. This template helps you write requirements; downloading it does not create or submit a project.
+
+1. MY PROJECT
+Name:
+Main goal:
+Intended users:
+Type: website / web application / Android project / other
+
+2. FIRST VERSION
+Three priority features:
+Expected screens:
+Main user journey:
+
+3. DATA AND ACCESS
+Data to use:
+Roles and permissions:
+Business rules:
+Do not paste API keys, passwords or real personal data into this document.
+
+4. DESIGN
+Colors:
+Logo and references:
+Languages:
+Mobile and desktop requirements:
+
+5. EXISTING PROJECT
+GitHub repository or ZIP archive:
+Features to preserve:
+Improvements wanted:
+
+6. REVIEW AND DELIVERY
+How to verify each feature:
+First expected result:
+Delivery: ZIP / GitHub / static publishing if enabled
+
+STARTING REQUEST
+"Here is my project. Let us start with [priority feature]. Propose changes so I can review them before applying them."

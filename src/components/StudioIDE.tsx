@@ -1,388 +1,81 @@
 'use client';
+import {HostingManager} from '@/components/hosting/HostingManager';
+import {Globe} from 'lucide-react';
+import {FileTypeIcon} from '@/components/icons/TechnologyIcon';
+import {DeveloperIdentity} from '@/components/DeveloperIdentity';
+import {JojoBrand} from '@/components/JojoBrand';
+import {CreditAccount} from '@/components/CreditAccount';
+import {useCallback,useEffect,useState,useRef} from 'react';
+import {ArrowLeft,Files,MessageSquare,Eye,Smartphone,Github,Database,Terminal,Users,CheckCheck,Save,Download,Loader2,Check,X,Plus,RefreshCw,Plug,Search,PanelBottom,PanelLeft,Pencil,Trash2,Command,Menu,HardDrive} from 'lucide-react';
+import {ProjectLibrary} from './library/ProjectLibrary';
+import {Panel,PanelGroup,PanelResizeHandle} from 'react-resizable-panels';
+import {Dialog,DialogContent,DialogHeader,DialogTitle} from '@/components/ui/dialog';
+import {studioRequest,streamStudioChat} from '@/lib/client/studio-api';
+import ProposalDiff from './editor/ProposalDiff';
+import {Button} from '@/components/ui/button';import {Input} from '@/components/ui/input';
+import {FileExplorer} from './explorer/FileExplorer';import {CodeEditor} from './editor/CodeEditor';import {AiChatPanel} from './chat/AiChatPanel';import {GitManager} from './git/GitManager';import {DatabaseManager} from './databases/DatabaseManager';import {StudioTerminal} from './terminal/StudioTerminal';import {AndroidEmulator} from './emulator/AndroidEmulator';
+import {getProjectFileTree,getFileContent,saveFileContent,getCredits,getPendingActions,approvePendingAction,approveAllPendingActions,rejectPendingAction,createFileSystemItem,inviteCollaborator,toggleProjectVisibility,deleteProject} from '@/lib/client/studio-actions';
+import type {AiProvider} from '@/lib/ai-providers';
+import {getChatHistory,sendChatMessage,getGenerationProgress} from '@/lib/client/studio-actions';
+import {ProjectWebView} from './preview/ProjectWebView';
+import {DeveloperTools} from './integrations/DeveloperTools';
+import {useToast} from '@/hooks/use-toast';import {cn} from '@/lib/utils';
+const sections=[['files','Fichiers',Files],['chat','Assistant',MessageSquare],['changes','Modifications',CheckCheck],['library','Bibliothèque',HardDrive],['preview','WebView / Aperçu',Eye],['android','Android',Smartphone],['git','GitHub / ZIP',Github],['db','Bases SQL',Database],['run','Terminal',Terminal],['hosting','Hébergement / Domaines',Globe],['tools','Outils / OpenAI',Plug],['team','Équipe',Users]] as const;
+export function StudioIDE({project,session,projects,onProjectSwitch,onProjectDeleted,onBack}:any){
+ const {toast}=useToast();const [mobileMenu,setMobileMenu]=useState(false);const [section,setSection]=useState(project.justCreated&&project.description?.trim()?'chat':'files'),[tree,setTree]=useState<any>({}),[tabs,setTabs]=useState<any[]>([]),[active,setActive]=useState(''),[messages,setMessages]=useState<any[]>([]),[credits,setCredits]=useState<number|null>(null),[pending,setPending]=useState<any[]>([]),[busy,setBusy]=useState(false),[email,setEmail]=useState(''),[isPublic,setPublic]=useState(Boolean(project.is_public)),[notice,setNotice]=useState(''),[previewKey,setPreviewKey]=useState(0),[position,setPosition]=useState({line:1,col:1});
+ const [wide,setWide]=useState(false),[explorer,setExplorer]=useState(true),[dock,setDock]=useState(false),[palette,setPalette]=useState(false),[search,setSearch]=useState(''),[fileList,setFileList]=useState<any[]>([]),[fileDialog,setFileDialog]=useState<'rename'|'delete'|null>(null),[target,setTarget]=useState('');const saving=useRef(new Set<string>());
+ useEffect(()=>{const media=window.matchMedia('(min-width: 1024px)');const change=()=>setWide(media.matches);change();media.addEventListener('change',change);return()=>media.removeEventListener('change',change);},[]);
+ const [reviewBusy,setReviewBusy]=useState(false);
+ const [runId,setRunId]=useState<string|null>(null),[progress,setProgress]=useState<any>(null),[autoApprove,setAutoApprove]=useState(false);
+ useEffect(()=>{if(!runId){setProgress(null);return;}let active=true;const poll=()=>getGenerationProgress(project.id,runId).then(r=>{if(active&&r.success)setProgress(r.run);});poll();const timer=setInterval(poll,900);return()=>{active=false;clearInterval(timer);};},[runId,project.id]);
+ const current=tabs.find(t=>t.id===active),dirty=tabs.some(t=>t.isDirty),owner=project.user_role==='owner';
+ const refresh=useCallback(async()=>{const [files,credit,history,actions]=await Promise.all([studioRequest(`/api/v1/projects/${project.id}/files`).then(r=>({success:true,files:r.files.map((f:any)=>f.path),metadata:r.files})).catch(()=>({success:false,files:[],metadata:[]})),getCredits(),getChatHistory(project.id),getPendingActions(project.id)]);if(files.success){setFileList(files.metadata);const root=Object.create(null);const proposed=actions.success?(actions.actions||[]).map((a:any)=>a.file_path).filter((p:string)=>!files.files.includes(p)):[];for(const path of [...files.files,...proposed]){const parts=path.split('/');let branch=root;parts.forEach((name,index)=>{if(!branch[name])branch[name]={path:parts.slice(0,index+1).join('/'),type:index===parts.length-1?'file':'folder',children:Object.create(null)};branch=branch[name].children;});}setTree(root);}else setNotice('Fichiers indisponibles. Vérifiez votre session et PostgreSQL.');setCredits(credit.success?credit.credits:null);if(history.success)setMessages(history.history);if(actions.success)setPending(actions.actions);},[project.id]);
+ useEffect(()=>{refresh();},[refresh]);useEffect(()=>{const warn=(e:BeforeUnloadEvent)=>{if(dirty){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[dirty]);
+ async function open(path:string){if(tabs.some(t=>t.id===path)){setActive(path);setSection('files');if(!wide)setExplorer(false);return;}try{const {file}=await studioRequest(`/api/v1/projects/${project.id}/files?path=${encodeURIComponent(path)}`);if(file.encoding!=='utf8')throw Error('Fichier binaire : utilisez le ZIP ou la prévisualisation.');if(new TextEncoder().encode(file.content).length>512*1024)throw Error('Le fichier dépasse la limite de l’éditeur (512 Ko).');setTabs(t=>[...t,{id:path,content:file.content,revision:file.revision,isDirty:false}]);setActive(path);setSection('files');if(!wide)setExplorer(false);}catch(e:any){setNotice(e.message);}}
+ async function save(path:string,content:string){if(saving.current.has(path))return;const file=tabs.find(f=>f.id===path);if(!file)return;saving.current.add(path);try{const {file:stored}=await studioRequest(`/api/v1/projects/${project.id}/files`,'PUT',{path,content,revision:file.revision});setTabs(t=>t.map(f=>f.id===path?{...f,revision:stored.revision,isDirty:f.content!==content}:f));setPreviewKey(k=>k+1);}catch(e:any){setNotice(e.message);}finally{saving.current.delete(path);}}
+ function closeTab(path:string){const file=tabs.find(t=>t.id===path);if(file?.isDirty&&!window.confirm('Fermer ce fichier sans enregistrer ?'))return;setTabs(t=>t.filter(f=>f.id!==path));if(active===path)setActive(tabs.find(f=>f.id!==path)?.id||'');}
+ async function fileOperation(){if(!current)return;try{const payload={path:current.id,revision:current.revision,target};const result=await studioRequest(`/api/v1/projects/${project.id}/files`,fileDialog==='delete'?'DELETE':'PATCH',payload);if(fileDialog==='delete')closeTab(current.id);else{setTabs(t=>t.map(f=>f.id===current.id?{...f,id:result.file.path,revision:result.file.revision}:f));setActive(result.file.path);}setFileDialog(null);await refresh();}catch(e:any){setNotice(e.message);}}
+ async function chat(message:string,attachments?:any[],provider?:AiProvider){const id=crypto.randomUUID();setRunId(id);setBusy(true);try{const r=await streamStudioChat(project.id,{message,attachments,requestId:id},setProgress);if(!r.success)throw Error(r.error);if(autoApprove){if(dirty)throw Error('Enregistrez vos fichiers avant la validation automatique.');const applied=await approveAllPendingActions(project.id);if(!applied.success)throw Error(applied.error);setTabs(t=>t.filter(f=>f.isDirty));setActive('');}await refresh();}catch(e:any){toast({title:'Génération ou application interrompue',description:e.message,variant:'destructive'});}finally{setBusy(false);setRunId(null);}}
 
-import { useState, useEffect, useCallback } from 'react';
-import { 
-    Files, Settings, X, 
-    Lock, Unlock, DatabaseZap, Github, BrainCircuit, Zap, Coins,
-    MonitorIcon, SmartphoneIcon, TabletIcon, RefreshCw, Download, Radio, ListTree,
-    ChevronDown, LayoutDashboard, ClipboardList, CheckCircle2, 
-    Package, Smartphone, Smartphone as ExpoIcon, Menu, Share2, Globe, Rocket, Puzzle,
-    AlertCircle, CheckCircle, Info, Terminal as TermIcon, GitBranch, Server, Activity,
-    ShieldCheck, Users, Eye, Code, Layers, Sparkles, Search
-} from 'lucide-react';
-import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { cn } from '@/lib/utils';
-import { Button } from './ui/button';
-import { 
-    getProjectFileTree, getFileContent, toggleProjectVisibility, getCredits, deleteProject,
-    getPendingActions, approvePendingAction, rejectPendingAction, saveFileContent, createFileSystemItem,
-    triggerBuild
-} from '@/lib/actions/dev-portal.actions';
-import { sendChatMessage, getChatHistory } from '@/lib/actions/ai.actions';
-import { useToast } from '@/hooks/use-toast';
-import Image from 'next/image';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-} from "@/components/ui/dropdown-menu";
+ async function create(path:string,type:'file'|'folder'){try{await studioRequest(`/api/v1/projects/${project.id}/files`,'POST',{path:type==='folder'?path+'/.gitkeep':path,content:''});await refresh();if(type==='file')await open(path);}catch(e:any){setNotice(e.message);}}
+ async function review(action:any,accept:boolean){setReviewBusy(true);try{const r=accept?await approvePendingAction(action.id):await rejectPendingAction(action.id);if(!r.success)throw Error((r as any).error||'Modification refusée.');if(accept){const stored=await studioRequest(`/api/v1/projects/${project.id}/files?path=${encodeURIComponent(action.file_path)}`);setTabs(t=>t.map(f=>f.id===action.file_path&&!f.isDirty?{...f,content:stored.file.content,revision:stored.file.revision}:f));}await refresh();setPreviewKey(k=>k+1);}catch(e:any){setNotice(e.message);}finally{setReviewBusy(false);}}
+ function leave(callback:()=>void){if(!dirty||window.confirm('Des fichiers ne sont pas enregistrés. Quitter ce projet ?'))callback();}
+ useEffect(()=>{const key=(e:KeyboardEvent)=>{if(!(e.ctrlKey||e.metaKey))return;if(e.key.toLowerCase()==='p'){e.preventDefault();setPalette(true);}if(e.key.toLowerCase()==='j'){e.preventDefault();setDock(v=>!v);}if(e.key.toLowerCase()==='b'){e.preventDefault();setExplorer(v=>!v);}if(e.key.toLowerCase()==='s'&&current){e.preventDefault();save(current.id,current.content);}};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);},[current]);
+ useEffect(()=>{const bridge=(window as any).jojoDesktop;if(!bridge)return;return bridge.onCommand((command:string)=>{if(command==='palette')setPalette(true);else if(command==='terminal')setDock(v=>!v);else if(command==='explorer')setExplorer(v=>!v);else if(command==='projects')leave(onBack);});},[dirty]);
+ const assistant=<AiChatPanel brief={project.description} onOpenTools={()=>setSection('tools')} onOpenChanges={()=>setSection('changes')} liveProgress={progress?.progress} projectId={project.id} messages={messages} onSendMessage={chat} isLoading={busy} currentCredits={credits??0} user={session.user} onRefresh={refresh} onInjectCode={code=>{if(current)setTabs(t=>t.map(f=>f.id===active?{...f,content:code,isDirty:true}:f));}}/>;
+ return <div className="flex h-dvh min-h-0 flex-col overflow-hidden bg-[#100d18] text-zinc-100">
+  <header className="hidden min-h-12 lg:flex shrink-0 flex-wrap items-center gap-3 border-b border-white/10 px-3 py-2 sm:px-5"><Button size="icon" variant="ghost" aria-label="Retour aux projets" onClick={()=>leave(onBack)}><ArrowLeft size={18}/></Button><JojoBrand busy={Boolean(runId)}/><div className="hidden xl:block"><DeveloperIdentity user={session.user}/></div><label className="min-w-0 flex-1 sm:max-w-xs"><span className="sr-only">Projet actif</span><select className="w-full truncate rounded-lg border border-white/10 bg-[#191321] px-3 py-2 text-sm" value={project.id} onChange={e=>leave(()=>onProjectSwitch(projects.find((p:any)=>p.id===Number(e.target.value))))}>{projects.map((p:any)=><option value={p.id} key={p.id}>{p.name}</option>)}</select></label><Button size="sm" variant="outline" className="hidden lg:flex" onClick={()=>setPalette(true)}><Search size={14}/> Rechercher un fichier / commande <kbd className="ml-2 text-xs text-zinc-500">Ctrl P</kbd></Button><Button size="icon" variant="ghost" aria-label="Afficher l’explorateur" onClick={()=>{setSection('files');setExplorer(v=>!v);}}><PanelLeft size={17}/></Button><Button size="icon" variant="ghost" className="hidden lg:inline-flex" aria-label="Afficher le terminal intégré" onClick={()=>setDock(v=>!v)}><PanelBottom size={17}/></Button><Button size="icon" variant="ghost" className="lg:hidden" aria-label="Palette de commandes" onClick={()=>setPalette(true)}><Search size={17}/></Button><CreditAccount/><span className="ml-auto hidden text-xs text-zinc-400 sm:inline">{credits===null?'Crédits indisponibles':`${credits.toFixed(2)} crédits`}</span><Button size="sm" variant="outline" aria-label="Enregistrer le fichier" disabled={!current?.isDirty} onClick={()=>current&&save(current.id,current.content)}><Save size={15}/><span className="hidden sm:inline">Enregistrer</span></Button><Button size="icon" variant="ghost" className="hidden sm:inline-flex" aria-label="Ouvrir le terminal du projet" onClick={()=>setSection('run')}><Terminal size={17}/></Button><a className="rounded-lg border border-white/15 p-2" title="Exporter le ZIP" aria-label="Exporter le ZIP" href={`/api/projects/${project.id}/archive`}><Download size={17}/></a></header>
+  <header className="flex h-14 shrink-0 items-center gap-2 border-b border-white/10 px-2 lg:hidden"><Button size="icon" variant="ghost" aria-label="Retour aux projets" onClick={()=>leave(onBack)}><ArrowLeft size={18}/></Button><img src="/brand/jojo-ai.png" alt="JoJo AI" width={30} height={30} className="shrink-0 rounded-lg"/><span className="min-w-0 flex-1 truncate text-sm font-medium" title={project.name}>{project.name}</span><Button size="icon" variant="ghost" aria-label="Enregistrer le fichier" disabled={!current?.isDirty} onClick={()=>current&&save(current.id,current.content)}><Save size={18}/></Button><Button size="icon" variant="ghost" aria-label="Menu du projet" onClick={()=>setMobileMenu(true)}><Menu size={20}/></Button></header>
+  <Dialog open={mobileMenu} onOpenChange={setMobileMenu}><DialogContent className="max-h-[85dvh] w-[calc(100%_-_1.5rem)] overflow-y-auto rounded-2xl border-white/10 bg-[#191321] text-zinc-100"><DialogHeader><DialogTitle>Menu du projet</DialogTitle></DialogHeader><DeveloperIdentity user={session.user}/><label className="space-y-2 text-sm"><span>Changer de projet</span><select aria-label="Changer de projet" className="h-11 w-full rounded-lg border border-white/10 bg-[#100d18] px-3" value={project.id} onChange={e=>leave(()=>{setMobileMenu(false);onProjectSwitch(projects.find((p:any)=>p.id===Number(e.target.value)));})}>{projects.map((p:any)=><option value={p.id} key={p.id}>{p.name}</option>)}</select></label><CreditAccount compact/><nav className="grid grid-cols-2 gap-2" aria-label="Toutes les sections du projet">{sections.map(([id,label,Icon])=><button key={id} className={cn('flex min-h-11 items-center gap-2 rounded-lg border border-white/10 px-3 text-left text-xs',section===id?'bg-violet-600 text-white':'text-zinc-300')} onClick={()=>{setSection(id);setMobileMenu(false);}}><Icon size={16}/>{label}</button>)}</nav><Button variant="outline" onClick={()=>{setMobileMenu(false);setPalette(true);}}><Search size={16}/>Rechercher un fichier</Button><a className="rounded-lg border border-white/10 p-3 text-center text-sm" href={`/api/projects/${project.id}/archive`}><Download size={16} className="mr-2 inline"/>Exporter le ZIP</a></DialogContent></Dialog>
+  <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+  <nav className="hidden shrink-0 gap-1 overflow-x-auto lg:flex border-b border-white/10 bg-[#17111f] p-2 lg:w-16 lg:flex-col lg:overflow-x-hidden lg:overflow-y-auto lg:border-b-0 lg:border-r" aria-label="Sections du studio">{sections.map(([id,label,Icon])=><button key={id} onClick={()=>setSection(id)} title={label} className={cn('flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs lg:min-h-12 lg:justify-center lg:px-2 transition-colors',section===id?'bg-violet-600 text-white':'text-zinc-400 hover:bg-white/5 hover:text-white')} aria-current={section===id?'page':undefined}><Icon size={18}/><span className="lg:sr-only">{label}</span>{id==='changes'&&pending.length>0&&<span className="rounded bg-black/25 px-1">{pending.length}</span>}</button>)}</nav>
+  <nav className="grid shrink-0 grid-cols-4 gap-1 border-b border-white/10 bg-[#17111f] p-1 lg:hidden" aria-label="Navigation du projet">{sections.filter(([id])=>['files','chat','preview'].includes(id)).map(([id,label,Icon])=><button key={id} aria-current={section===id?'page':undefined} onClick={()=>setSection(id)} className={cn('flex min-h-11 flex-col items-center justify-center gap-1 rounded-lg text-[10px]',section===id?'bg-violet-600 text-white':'text-zinc-400')}><Icon size={17}/>{id==='preview'?'Aperçu':label}</button>)}<button onClick={()=>setMobileMenu(true)} className="flex min-h-11 flex-col items-center justify-center gap-1 rounded-lg text-[10px] text-zinc-400"><Menu size={17}/>Plus</button></nav>
+  <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+  {notice&&<div className="flex items-start justify-between gap-3 border-b border-amber-400/20 bg-amber-950/25 px-5 py-3 text-sm text-amber-100" role="status">{notice}<button aria-label="Fermer le message" onClick={()=>setNotice('')}><X size={16}/></button></div>}
+  {runId&&<div role="status" className="max-h-36 shrink-0 overflow-auto border-b border-violet-500/20 bg-violet-950/20 px-4 py-3 text-xs"><p className="font-medium text-violet-200">{progress?.progress?.stage==='review'?'Propositions prêtes à valider':progress?.progress?.stage==='image_requested'?'Génération du PNG par OpenAI':'Réception du flux OpenAI · fichiers non appliqués'}</p>{progress?.progress?.characters>0&&<p className="mt-1 text-zinc-400">{progress.progress.characters.toLocaleString()} caractères reçus</p>}{(progress?.progress?.files||[]).map((path:string)=><p key={path} className="mt-1 break-all font-mono text-violet-300">{path}</p>)}</div>}
+  <PanelGroup direction="vertical" className="min-h-0 flex-1" autoSaveId="jojo-vertical-layout"><Panel minSize={25} defaultSize={dock&&section!=='run'?75:100}>
+  <main className="relative h-full min-h-0 overflow-hidden">
+   {section==='files'&&<PanelGroup direction="horizontal" autoSaveId={wide?'jojo-desktop-layout':undefined}>
+    {explorer&&wide&&<><Panel id="explorer" order={1} defaultSize={20} minSize={15} maxSize={35}><FileExplorer fileTree={tree} files={fileList} pending={pending} onPendingClick={()=>setSection('changes')} onFileClick={open} onRefresh={refresh} onCreateItem={create}/></Panel><PanelResizeHandle className="w-1 bg-white/5 hover:bg-violet-500"/></>}
+    <Panel id="editor" order={2} defaultSize={wide?55:100} minSize={25}><section className="flex h-full min-w-0 flex-col"><div className="flex min-h-10 shrink-0 overflow-x-auto border-b border-white/10 bg-black/15">{tabs.map(f=><div key={f.id} className={cn('flex shrink-0 items-center border-r border-white/10 text-xs',active===f.id?'border-t-2 border-t-violet-500 bg-white/5':'text-zinc-500')}><button className="flex items-center gap-2 px-3 py-3" onClick={()=>setActive(f.id)} title={f.id}><FileTypeIcon path={f.id}/>{f.id.split('/').pop()}{f.isDirty?' •':''}</button><button aria-label={`Fermer ${f.id}`} className="mr-2 p-1 hover:text-white" onClick={()=>closeTab(f.id)}><X size={12}/></button></div>)}</div>{current&&<div className="flex items-center gap-2 border-b border-white/5 px-3 py-1 text-xs text-zinc-500"><span className="mr-auto truncate">{current.id}</span><button title="Recharger le fichier" onClick={async()=>{if(current.isDirty&&!window.confirm('Recharger et abandonner les modifications non enregistrées ?'))return;try{const {file}=await studioRequest(`/api/v1/projects/${project.id}/files?path=${encodeURIComponent(current.id)}`);setTabs(t=>t.map(f=>f.id===current.id?{...f,content:file.content,revision:file.revision,isDirty:false}:f));}catch(e:any){setNotice(e.message);}}}><RefreshCw size={13}/></button><button disabled={current.isDirty} title="Renommer le fichier" onClick={()=>{setTarget(current.id);setFileDialog('rename');}}><Pencil size={13}/></button><button disabled={current.isDirty} title="Supprimer le fichier" onClick={()=>setFileDialog('delete')}><Trash2 size={13}/></button></div>}<div className="min-h-0 flex-1">{current?<CodeEditor content={current.content} filePath={current.id} onChange={value=>setTabs(t=>t.map(f=>f.id===active?{...f,content:value,isDirty:true}:f))} onSave={value=>save(current.id,value)} onCursorChange={(line,col)=>setPosition({line,col})}/>:<div className="grid h-full place-items-center p-5 text-center text-sm text-zinc-500"><div className="space-y-4"><Files className="mx-auto h-12 w-12 text-violet-400"/><p>Ouvrez un fichier ou importez votre dépôt.</p><Button variant="outline" onClick={()=>setPalette(true)}>Rechercher · Ctrl P</Button><p className="text-xs">Terminal · Ctrl J / Enregistrer · Ctrl S</p></div></div>}</div></section></Panel>
+    {wide&&<><PanelResizeHandle className="w-1 bg-white/5 hover:bg-violet-500"/><Panel id="assistant" order={3} defaultSize={25} minSize={20} maxSize={45}>{assistant}</Panel></>}
+    {!wide&&explorer&&<div className="absolute inset-y-0 left-0 z-20 flex w-[min(300px,90vw)] flex-col border-r border-white/15 shadow-2xl"><Button variant="outline" onClick={()=>setExplorer(false)}>Fermer l’explorateur</Button><div className="min-h-0 flex-1"><FileExplorer fileTree={tree} files={fileList} pending={pending} onPendingClick={()=>setSection('changes')} onFileClick={open} onRefresh={refresh} onCreateItem={create}/></div></div>}
+   </PanelGroup>}
 
-import { CodeEditor } from './editor/CodeEditor';
-import { StudioTerminal } from './terminal/StudioTerminal';
-import { FileExplorer } from './explorer/FileExplorer';
-import { AiChatPanel } from './chat/AiChatPanel';
-import { DatabaseManager } from './databases/DatabaseManager';
-import { GitManager } from './git/GitManager';
-import { AndroidEmulator } from './emulator/AndroidEmulator';
-import { motion, AnimatePresence } from 'framer-motion';
-
-export function StudioIDE({ project, session, projects, onProjectSwitch, onProjectDeleted }: any) {
-  const { toast } = useToast();
-  const [fileTree, setFileTree] = useState<any>({});
-  const [openTabs, setOpenTabs] = useState<any[]>([]);
-  const [activeTabId, setActiveTabId] = useState<string | null>(null);
-  const [sidebarTab, setSidebarTab] = useState<'files' | 'approval' | 'git' | 'db' | 'settings' | 'domains'>('files');
-  const [viewMode, setViewMode] = useState<'code' | 'preview'>('code');
-  const isAndroidTemplate = project?.app_template === 'android' || project?.app_template === 'react-native';
-  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile' | 'tablet'>(isAndroidTemplate ? 'mobile' : 'desktop');
-  const [mobileView, setMobileView] = useState<'chat' | 'preview' | 'code'>('chat');
-  
-  const [credits, setCredits] = useState(0);
-  const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
-  const [messages, setMessages] = useState<any[]>([]);
-  const [isAiLoading, setIsAiLoading] = useState(false);
-  const [pendingActions, setPendingActions] = useState<any[]>([]);
-
-  const isOwner = project.user_role === 'owner';
-  const publicPreviewUrl = `${typeof window !== 'undefined' ? window.location.origin : 'http://jojoai.com'}/p/${project.id}`;
-
-  const fetchTreeAndCredits = useCallback(async () => {
-    const result = await getProjectFileTree(project.id);
-    if (result.success) {
-        const tree: any = {};
-        result.files.forEach((path: string) => {
-            let curr = tree;
-            const parts = path.split('/');
-            parts.forEach((part, i) => {
-                if (!curr[part]) {
-                    if (i < parts.length - 1) curr[part] = { path: parts.slice(0, i+1).join('/'), type: 'folder', children: {} };
-                    else curr[part] = { path, type: 'file' };
-                }
-                if (curr[part].type === 'folder') curr = curr[part].children;
-            });
-        });
-        setFileTree(tree);
-    }
-    const credRes = await getCredits();
-    if (credRes.success) setCredits(credRes.credits);
-
-    const historyRes = await getChatHistory(project.id);
-    if (historyRes.success) setMessages(historyRes.history);
-
-    const actionsRes = await getPendingActions(project.id);
-    if (actionsRes.success) setPendingActions(actionsRes.actions);
-  }, [project.id]);
-
-  useEffect(() => { fetchTreeAndCredits(); }, [fetchTreeAndCredits]);
-
-  const handleFileClick = async (path: string) => {
-    if (openTabs.some(t => t.id === path)) { setActiveTabId(path); return; }
-    const res = await getFileContent(project.id, path);
-    const newTab = { id: path, title: path.split('/').pop()!, content: res.content, isDirty: false };
-    setOpenTabs(prev => [...prev, newTab]);
-    setActiveTabId(path);
-  };
-
-  const handleSaveFile = async (id: string, content: string) => {
-    const res = await saveFileContent(project.id, id, content);
-    if (res.success) {
-        setOpenTabs(ts => ts.map(t => t.id === id ? { ...t, isDirty: false } : t));
-        toast({ title: "Sauvegarde Elite", description: `Le fichier ${id.split('/').pop()} synchronisé.` });
-    } else {
-        console.error('Failed to save file:', res.error);
-        toast({ variant: 'destructive', title: 'Erreur Sauvegarde', description: res.error || 'Impossible d\'enregistrer le fichier.' });
-    }
-  };
-
-  const handleSendMessage = async (text: string, attachments?: any[]) => {
-    if (!text.trim() && (!attachments || attachments.length === 0)) return;
-    setIsAiLoading(true);
-    const res = await sendChatMessage(project.id, text, attachments);
-    setIsAiLoading(false);
-    
-    if (res.success) {
-        setMessages(prev => [...prev, { role: 'user', content: text }, { role: 'model', content: res.text }]);
-        if (res.newBalance !== undefined) setCredits(res.newBalance);
-        if (res.refreshFiles) {
-            fetchTreeAndCredits();
-            // Si un fichier ouvert est modifié par l'IA, on rafraîchit ses onglets
-            if (activeTabId) {
-                const updatedContent = await getFileContent(project.id, activeTabId);
-                setOpenTabs(ts => ts.map(t => t.id === activeTabId ? { ...t, content: updatedContent.content, isDirty: false } : t));
-            }
-        }
-    } else {
-        console.error('JOJO AI chat error:', res.error);
-        toast({ variant: 'destructive', title: 'Erreur JOJO AI', description: res.error });
-    }
-  };
-
-  const activeTab = openTabs.find(t => t.id === activeTabId);
-
-  return (
-    <div className="flex h-screen w-full bg-[#05070a] text-gray-300 font-sans overflow-hidden flex-col select-none relative">
-        {/* Barra de Menus */}
-        <div className="h-9 bg-[#0c0d12] border-b border-white/5 flex items-center px-2 gap-1 text-[11px] font-bold text-gray-500 z-[100] premium-border">
-            <Image src="/logos/logo1.png" alt="JOJO AI" width={80} height={20} className="mr-4 opacity-80" />
-            
-            <DropdownMenu>
-                <DropdownMenuTrigger className="px-3 h-7 hover:bg-white/5 rounded transition-colors uppercase tracking-widest outline-none">Fichier</DropdownMenuTrigger>
-                <DropdownMenuContent className="bg-[#1c1c21] border-white/10 text-white min-w-[200px] glass-panel">
-                    <DropdownMenuItem className="text-[10px] uppercase font-bold" onClick={() => fetchTreeAndCredits()}>Actualiser</DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => handleSaveFile(activeTab?.id || '', activeTab?.content || '')} className="text-[10px] uppercase font-bold flex justify-between">Sauvegarder <span className="opacity-40">Ctrl+S</span></DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
-
-            <DropdownMenu>
-                <DropdownMenuTrigger className="px-3 h-7 hover:bg-white/5 rounded transition-colors uppercase tracking-widest outline-none">Collaboration</DropdownMenuTrigger>
-                <DropdownMenuContent className="bg-[#1c1c21] border-white/10 text-white min-w-[200px] glass-panel">
-                    <DropdownMenuItem className="text-[10px] uppercase font-bold" onClick={() => { navigator.clipboard.writeText(publicPreviewUrl); toast({ title: "Lien Copié", description: "Lien de visualisation prêt." }); }}>Copier Lien Preview</DropdownMenuItem>
-                    <DropdownMenuItem className="text-[10px] uppercase font-bold">Gérer les Accès</DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
-
-            <div className="flex-1" />
-
-            <div className="flex items-center gap-2 pr-2">
-                <Button variant="ghost" className="h-6 px-3 bg-accent text-white text-[9px] font-black rounded uppercase shadow-lg" onClick={() => { navigator.clipboard.writeText(publicPreviewUrl); toast({ title: "Lien Public Copié" }); }}>
-                    <Share2 className="h-3.5 w-3.5 mr-2" /> Partager
-                </Button>
-            </div>
-        </div>
-
-        {/* Workspace Principal */}
-        <div className="flex flex-1 overflow-hidden relative">
-            {/* Mobile View Container (md:hidden) */}
-            <div className="flex flex-col flex-1 md:hidden overflow-hidden relative pb-16">
-                {mobileView === 'chat' && (
-                    <div className="h-full w-full flex flex-col">
-                        <AiChatPanel 
-                            projectId={project.id}
-                            messages={messages}
-                            onSendMessage={handleSendMessage}
-                            isLoading={isAiLoading}
-                            onRefresh={fetchTreeAndCredits}
-                            currentCredits={credits}
-                            user={session.user}
-                            onInjectCode={(code) => {
-                                if (activeTabId) {
-                                    setOpenTabs(ts => ts.map(t => t.id === activeTabId ? { ...t, content: code, isDirty: true } : t));
-                                    toast({ title: "Code injecté dans l'éditeur", description: activeTabId });
-                                }
-                            }}
-                        />
-                    </div>
-                )}
-                {mobileView === 'preview' && (
-                    <div className="h-full w-full bg-[#080a10] flex flex-col overflow-hidden">
-                        <div className="h-10 px-3 bg-[#0c0e17] border-b border-white/10 flex items-center justify-between text-[11px] font-black uppercase text-gray-400 shrink-0">
-                            <span className="text-cyan-400 flex items-center gap-2">
-                                <Smartphone className="h-4 w-4" /> Android 14 (Pixel 8 Pro)
-                            </span>
-                        </div>
-                        <div className="flex-1 relative overflow-hidden">
-                            <AndroidEmulator 
-                                projectId={project.id}
-                                projectName={project.name}
-                                appCode={activeTab?.content}
-                                template={project.app_template}
-                            />
-                        </div>
-                    </div>
-                )}
-                {mobileView === 'code' && (
-                    <div className="h-full w-full flex flex-col bg-[#05070a]">
-                        <div className="h-9 flex bg-[#0c0d12] border-b border-white/5 overflow-x-auto scrollbar-hide shrink-0">
-                            {openTabs.map(tab => (
-                                <div key={tab.id} onClick={() => setActiveTabId(tab.id)} className={cn("flex items-center px-4 py-2 text-[9px] font-bold border-r border-white/5 cursor-pointer min-w-[120px] transition-all", activeTabId === tab.id ? "bg-[#111114] text-white border-b-2 border-b-accent" : "bg-black/20 text-gray-500 hover:bg-black/40")}>
-                                    <span className="truncate uppercase">{tab.title}{tab.isDirty && '*'}</span>
-                                    <X className="ml-auto h-3 w-3 hover:text-red-400 p-0.5" onClick={(e) => { e.stopPropagation(); setOpenTabs(ts => ts.filter(t => t.id !== tab.id)); if (activeTabId === tab.id) setActiveTabId(null); }} />
-                                </div>
-                            ))}
-                        </div>
-                        <div className="flex-1 relative overflow-hidden">
-                            {activeTab ? (
-                                <CodeEditor content={activeTab.content} onChange={(v) => setOpenTabs(ts => ts.map(t => t.id === activeTabId ? { ...t, content: v, isDirty: true } : t))} filePath={activeTab.id} onCursorChange={(l, c) => setCursorPos({ line: l, col: c })} onSave={(v) => handleSaveFile(activeTab.id, v)} />
-                            ) : (
-                                <div className="p-4">
-                                    <div className="text-xs uppercase font-bold text-gray-400 mb-3">Explorateur de Fichiers</div>
-                                    <FileExplorer fileTree={fileTree} onFileClick={(p) => { handleFileClick(p); }} onRefresh={fetchTreeAndCredits} onCreateItem={(p, t) => createFileSystemItem(project.id, p, t).then(() => fetchTreeAndCredits())} />
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {/* Mobile Bottom Navigation Bar (3 buttons: Chat, Preview, Code with tag icon) */}
-                <div className="fixed bottom-0 left-0 right-0 h-16 bg-[#0c0d12]/95 backdrop-blur-md border-t border-white/10 flex items-center justify-around z-[200] px-4 shadow-2xl">
-                    <button 
-                        onClick={() => setMobileView('chat')}
-                        className={cn("flex flex-col items-center justify-center flex-1 py-2 transition-colors", mobileView === 'chat' ? "text-accent font-black" : "text-gray-400 hover:text-white")}
-                    >
-                        <BrainCircuit className="h-5 w-5 mb-1" />
-                        <span className="text-[10px] uppercase tracking-wider">Chat</span>
-                    </button>
-                    <button 
-                        onClick={() => setMobileView('preview')}
-                        className={cn("flex flex-col items-center justify-center flex-1 py-2 transition-colors", mobileView === 'preview' ? "text-cyan-400 font-black" : "text-gray-400 hover:text-white")}
-                    >
-                        <Smartphone className="h-5 w-5 mb-1" />
-                        <span className="text-[10px] uppercase tracking-wider">Preview</span>
-                    </button>
-                    <button 
-                        onClick={() => setMobileView('code')}
-                        className={cn("flex flex-col items-center justify-center flex-1 py-2 transition-colors", mobileView === 'code' ? "text-cyan-400 font-black" : "text-gray-400 hover:text-white")}
-                    >
-                        <Code className="h-5 w-5 mb-1" />
-                        <span className="text-[10px] uppercase tracking-wider">&lt;Code&gt;</span>
-                    </button>
-                </div>
-            </div>
-
-            {/* Desktop View Layout (hidden md:flex) */}
-            <div className="hidden md:flex flex-1 overflow-hidden relative">
-            <div className="w-12 bg-[#0c0d12] border-r border-white/5 flex flex-col items-center py-4 gap-6 z-50">
-                <div className={cn("p-2 rounded-lg cursor-pointer transition-all", sidebarTab === 'files' ? "text-accent bg-accent/10" : "text-gray-600 hover:text-gray-400")} onClick={() => setSidebarTab('files')}><Files className="h-5 w-5" /></div>
-                <div className={cn("p-2 rounded-lg cursor-pointer transition-all", sidebarTab === 'git' ? "text-accent bg-accent/10" : "text-gray-600 hover:text-gray-400")} onClick={() => setSidebarTab('git')}><Github className="h-5 w-5" /></div>
-                <div className={cn("p-2 rounded-lg cursor-pointer transition-all", sidebarTab === 'db' ? "text-accent bg-accent/10" : "text-gray-600 hover:text-gray-400")} onClick={() => setSidebarTab('db')}><DatabaseZap className="h-5 w-5" /></div>
-                <div className={cn("p-2 rounded-lg cursor-pointer transition-all mt-auto", sidebarTab === 'settings' ? "text-accent bg-accent/10" : "text-gray-600 hover:text-gray-400")} onClick={() => setSidebarTab('settings')}><Settings className="h-5 w-5" /></div>
-            </div>
-
-            <PanelGroup direction="horizontal">
-                <Panel defaultSize={20} minSize={15} className="bg-[#0c0d12] border-r border-white/5 glass-panel hidden md:block">
-                    <AnimatePresence mode="wait">
-                        {sidebarTab === 'files' && <FileExplorer fileTree={fileTree} onFileClick={handleFileClick} onRefresh={fetchTreeAndCredits} onCreateItem={(p, t) => createFileSystemItem(project.id, p, t).then((res) => { if (!res.success) console.error('Failed to create file system item:', res.error); fetchTreeAndCredits(); }).catch(err => { console.error('Error creating file system item:', err); })} />}
-                        {sidebarTab === 'git' && <GitManager projectId={project.id} />}
-                        {sidebarTab === 'db' && <DatabaseManager projectId={project.id} />}
-                    </AnimatePresence>
-                </Panel>
-                
-                <PanelResizeHandle className="w-px bg-white/5 hover:bg-accent/40 transition-colors hidden md:block" />
-
-                <Panel defaultSize={50}>
-                    <PanelGroup direction="vertical">
-                        <Panel defaultSize={70}>
-                            <div className="h-full flex flex-col bg-[#05070a]">
-                                <div className="h-9 flex bg-[#0c0d12] border-b border-white/5 overflow-x-auto scrollbar-hide shrink-0">
-                                    {openTabs.map(tab => (
-                                        <div key={tab.id} onClick={() => setActiveTabId(tab.id)} className={cn("flex items-center px-4 py-2 text-[9px] font-bold border-r border-white/5 cursor-pointer min-w-[120px] transition-all", activeTabId === tab.id ? "bg-[#111114] text-white border-b-2 border-b-accent" : "bg-black/20 text-gray-500 hover:bg-black/40")}>
-                                            <span className="truncate uppercase">{tab.title}{tab.isDirty && '*'}</span>
-                                            <X className="ml-auto h-3 w-3 hover:text-red-400 p-0.5" onClick={(e) => { e.stopPropagation(); setOpenTabs(ts => ts.filter(t => t.id !== tab.id)); if (activeTabId === tab.id) setActiveTabId(null); }} />
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="flex-1 relative overflow-hidden h-full">
-                                    <PanelGroup direction="horizontal">
-                                        <Panel defaultSize={60}>
-                                            {activeTab ? (
-                                                <CodeEditor content={activeTab.content} onChange={(v) => setOpenTabs(ts => ts.map(t => t.id === activeTabId ? { ...t, content: v, isDirty: true } : t))} filePath={activeTab.id} onCursorChange={(l, c) => setCursorPos({ line: l, col: c })} onSave={(v) => handleSaveFile(activeTab.id, v)} />
-                                            ) : (
-                                                <div className="h-full flex flex-col items-center justify-center opacity-10">
-                                                    <Image src="/logos/icon.png" alt="JOJO" width={100} height={100} className="animate-pulse" />
-                                                </div>
-                                            )}
-                                        </Panel>
-                                        <PanelResizeHandle className="w-px bg-white/5" />
-                                        <Panel defaultSize={40}>
-                                            <div className="h-full bg-[#080a10] flex flex-col border-l border-white/5 overflow-hidden">
-                                                <div className="h-8 px-3 bg-[#0c0e17] border-b border-white/10 flex items-center justify-between text-[10px] font-black uppercase text-gray-400 shrink-0">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-cyan-400 flex items-center gap-1.5 font-bold tracking-wider">
-                                                            {previewDevice === 'mobile' ? <Smartphone className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
-                                                            {previewDevice === 'mobile' ? 'Android 14 (Pixel 8 Pro)' : 'Web Live View'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1 bg-black/40 p-0.5 rounded-lg border border-white/10">
-                                                        <button 
-                                                            onClick={() => setPreviewDevice('mobile')}
-                                                            className={cn("px-2 py-0.5 rounded text-[8px] font-black uppercase transition-all flex items-center gap-1", previewDevice === 'mobile' ? "bg-cyan-500 text-black shadow-md" : "text-gray-400 hover:text-white")}
-                                                        >
-                                                            <Smartphone className="h-2.5 w-2.5" /> Android
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => setPreviewDevice('desktop')}
-                                                            className={cn("px-2 py-0.5 rounded text-[8px] font-black uppercase transition-all flex items-center gap-1", previewDevice === 'desktop' ? "bg-cyan-500 text-black shadow-md" : "text-gray-400 hover:text-white")}
-                                                        >
-                                                            <Globe className="h-2.5 w-2.5" /> Web
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                <div className="flex-1 relative overflow-hidden">
-                                                    {previewDevice === 'mobile' ? (
-                                                        <AndroidEmulator 
-                                                            projectId={project.id} 
-                                                            projectName={project.name} 
-                                                            appCode={activeTab?.content} 
-                                                            template={project.app_template} 
-                                                        />
-                                                    ) : (
-                                                        <div className="h-full bg-white p-2">
-                                                            <iframe src={publicPreviewUrl} className="w-full h-full border-none rounded-lg" />
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </Panel>
-                                    </PanelGroup>
-                                </div>
-                            </div>
-                        </Panel>
-                        <PanelResizeHandle className="h-px bg-white/5" />
-                        <Panel defaultSize={30}>
-                            <StudioTerminal projectName={project.name} projectId={project.id} />
-                        </Panel>
-                    </PanelGroup>
-                </Panel>
-
-                <PanelResizeHandle className="w-px bg-white/5 hidden lg:block" />
-
-                <Panel defaultSize={30} minSize={20} className="hidden lg:block">
-                    <AiChatPanel 
-                        projectId={project.id} 
-                        messages={messages} 
-                        onSendMessage={handleSendMessage} 
-                        isLoading={isAiLoading} 
-                        onRefresh={fetchTreeAndCredits} 
-                        currentCredits={credits} 
-                        user={session.user}
-                        onInjectCode={(code) => {
-                            if (activeTabId) {
-                                setOpenTabs(ts => ts.map(t => t.id === activeTabId ? { ...t, content: code, isDirty: true } : t));
-                                toast({ title: "Code injecté dans l'éditeur", description: activeTabId });
-                            }
-                        }}
-                    />
-                </Panel>
-            </PanelGroup>
-        </div>
-
-        <div className="h-6 bg-[#0c0d12] text-gray-500 flex items-center justify-between px-3 text-[9px] font-bold uppercase tracking-widest z-50 premium-border">
-            <div className="flex items-center gap-5">
-                <div className="flex items-center gap-2 bg-white/5 px-2 py-0.5 rounded text-white"><GitBranch className="h-3 w-3 text-accent" /> main</div>
-                <div className="flex items-center gap-2"><Activity className="h-3 w-3" /> CPU: 12% | RAM: 1.2GB</div>
-            </div>
-            <div className="flex items-center gap-5">
-                <div className="flex items-center gap-1.5 bg-accent/10 text-accent px-2 py-0.5 rounded border border-accent/20"><Coins className="h-3 w-3" /><span>{credits.toFixed(1)} COINS</span></div>
-                <div className="flex items-center gap-2"><CheckCircle2 className="h-3 w-3 text-green-500" /> SYNC OK</div>
-                <span className="font-mono opacity-40">Ln {cursorPos.line}, Col {cursorPos.col}</span>
-            </div>
-        </div>
-    </div>
-  );
+   {section==='chat'&&assistant}
+   {section==='library'&&<ProjectLibrary files={fileList} onRefresh={refresh} onOpen={path=>{setSection('files');open(path);}}/>}
+   {section==='preview'&&<ProjectWebView projectId={project.id} isPublic={isPublic} isOwner={owner} onPublicChange={setPublic} onTerminal={()=>setSection('run')}/>}
+   {section==='tools'&&<DeveloperTools projectId={project.id} android={project.app_template==='android'} onRefresh={refresh} onRun={setRunId}/>}
+   {section==='android'&&<AndroidEmulator projectId={project.id} projectName={project.name}/>}
+   {section==='git'&&<GitManager projectName={project.name} projectId={project.id} hasUnsavedChanges={dirty} onRefresh={()=>{setTabs(t=>t.filter(f=>f.isDirty));setActive('');refresh();}}/>}
+   {section==='hosting'&&<HostingManager projectId={project.id} onPublish={()=>setSection('run')} onFiles={()=>setSection('files')} onDatabase={()=>setSection('db')}/>}
+   {section==='db'&&<DatabaseManager projectId={project.id}/>}
+   {section==='run'&&<StudioTerminal projectId={project.id} projectName={project.name} hasUnsavedChanges={dirty} onRefresh={refresh} onOpenWebView={()=>setSection('preview')} onOpenChanges={()=>setSection('changes')}/>}
+   {section==='changes'&&<section className="h-full space-y-5 overflow-auto p-5"><h2 className="text-lg font-semibold">Modifications à valider</h2><div className="flex flex-wrap items-center gap-3"><Button disabled={reviewBusy||!pending.length||dirty} onClick={async()=>{setReviewBusy(true);const r=await approveAllPendingActions(project.id);if(r.success){setTabs(t=>t.filter(f=>f.isDirty));setActive('');await refresh();}else setNotice(r.error||'Validation refusée.');setReviewBusy(false);}}>Tout valider</Button><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={autoApprove} disabled={busy||dirty} onChange={e=>setAutoApprove(e.target.checked)}/> Appliquer automatiquement toutes les propositions en attente après les prochaines générations</label></div><p className="text-sm text-zinc-400">Vérifiez le code et les manifestes d’installation avant application. Un fichier ouvert avec des modifications non enregistrées reste intact dans l’éditeur.</p>{!pending.length&&<p className="text-zinc-500">Aucune modification en attente.</p>}{pending.map(a=><article key={a.id} className="space-y-3 rounded-xl border border-white/10 p-4"><h3 className="break-all font-mono text-sm">{a.file_path}</h3>{a.runtime_job_id&&<p className="text-xs text-violet-300">Installation npm · {a.runtime_job_id.slice(0,8)}</p>}{a.file_encoding==='base64'?<img src={`data:image/png;base64,${a.content}`} alt={`Logo proposé : ${a.file_path}`} className="max-h-72 max-w-full rounded-lg bg-white/10 object-contain p-3"/>:<ProposalDiff projectId={project.id} path={a.file_path} content={a.content}/>}<div className="flex gap-3"><Button disabled={reviewBusy} onClick={()=>review(a,true)}><Check size={15}/> Appliquer</Button><Button disabled={reviewBusy} variant="outline" onClick={()=>review(a,false)}><X size={15}/> Refuser</Button></div></article>)}</section>}
+   {section==='team'&&<section className="h-full max-w-2xl space-y-5 overflow-auto p-5"><h2 className="text-lg font-semibold">Collaboration et aperçu</h2><p className="text-sm text-zinc-400">Invitez un compte développeur existant. L’invité doit accepter avant d’accéder aux fichiers.</p><label className="block">Adresse e-mail<Input value={email} type="email" onChange={e=>setEmail(e.target.value)} placeholder="collaborateur@entreprise.com"/></label><Button disabled={!owner||!email} onClick={async()=>{const r=await inviteCollaborator(project.id,email);setNotice(r.success?'Invitation enregistrée.':r.error||'Invitation refusée.');}}>Inviter</Button><label className="flex items-center gap-3 rounded-xl border border-white/10 p-4"><input type="checkbox" disabled={!owner} checked={isPublic} onChange={async e=>{const next=e.target.checked;const r=await toggleProjectVisibility(project.id,next);if(r.success)setPublic(next);else setNotice('Modification refusée.');}}/><span>Rendre l’aperçu statique public</span></label><p className="text-xs text-zinc-500">Le ZIP source reste réservé aux membres. Seuls la page HTML et ses ressources référencées sont servis dans l’aperçu public.</p>{owner&&<Button variant="destructive" onClick={async()=>{if(window.confirm('Supprimer ce projet et ses fichiers ?')){const r=await deleteProject(project.id);if(r.success)onProjectDeleted?.();else setNotice('Suppression refusée.');}}}>Supprimer le projet</Button>}<a href={`/p/${project.id}`} target="_blank" rel="noreferrer" className="inline-block text-violet-300 underline">Ouvrir l’aperçu {isPublic?'public':'privé'}</a></section>}
+  </main></Panel>{dock&&section!=='run'&&<><PanelResizeHandle className="h-1 bg-white/5 hover:bg-violet-500"/><Panel defaultSize={25} minSize={15}><div className="flex h-full flex-col"><div className="flex shrink-0 items-center justify-between border-b border-white/10 px-3 text-xs"><span>TERMINAL DU PROJET</span><button className="p-2" onClick={()=>setDock(false)} aria-label="Fermer le terminal intégré"><X size={13}/></button></div><div className="min-h-0 flex-1"><StudioTerminal projectId={project.id} projectName={project.name} hasUnsavedChanges={dirty} onRefresh={refresh} onOpenWebView={()=>setSection('preview')} onOpenChanges={()=>setSection('changes')}/></div></div></Panel></>}</PanelGroup></div></div>
+  <Dialog open={palette} onOpenChange={setPalette}><DialogContent className="max-h-[80dvh] overflow-auto"><DialogHeader><DialogTitle>Fichiers et commandes</DialogTitle></DialogHeader><Input autoFocus aria-label="Rechercher fichiers et commandes" placeholder="Nom de fichier, terminal, GitHub…" value={search} onChange={e=>setSearch(e.target.value)}/><div className="space-y-1">{sections.filter(([,label])=>label.toLowerCase().includes(search.toLowerCase())).map(([id,label,Icon])=><button key={id} className="flex w-full items-center gap-3 rounded p-3 text-left text-sm hover:bg-white/5" onClick={()=>{setSection(id);setPalette(false);}}><Icon size={15}/>{label}</button>)}{fileList.filter(f=>!f.path.endsWith('/.gitkeep')&&f.path.toLowerCase().includes(search.toLowerCase())).slice(0,100).map(f=><button key={f.path} className="block w-full truncate rounded p-3 text-left font-mono text-xs hover:bg-white/5" onClick={()=>{open(f.path);setPalette(false);}}>{f.path}</button>)}</div></DialogContent></Dialog>
+  <Dialog open={!!fileDialog} onOpenChange={open=>!open&&setFileDialog(null)}><DialogContent><DialogHeader><DialogTitle>{fileDialog==='rename'?'Renommer le fichier':'Supprimer le fichier'}</DialogTitle></DialogHeader><p className="break-all text-sm text-zinc-400">{current?.id}</p>{fileDialog==='rename'&&<Input aria-label="Nouveau chemin" value={target} onChange={e=>setTarget(e.target.value)}/>}<Button variant={fileDialog==='delete'?'destructive':'default'} onClick={fileOperation}>Confirmer</Button></DialogContent></Dialog>
+  <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-white/10 px-4 py-2 text-[11px] text-zinc-500"><span>{current?.id||project.name}</span><span className="truncate">{wide?'Desktop · ':'Mobile · '}{dirty?'Modifications non enregistrées':'Fichiers enregistrés'} · Ln {position.line}, Col {position.col}</span></footer>
+ </div>;
 }

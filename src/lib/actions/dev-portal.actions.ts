@@ -1,6 +1,14 @@
 'use server';
 
+import {generationBalance} from '../generation-ledger';
+import {createHash} from 'node:crypto';
 import { db } from '../db';
+import {provisionProjectDatabase,queryProjectDatabase} from '../project-databases';
+import {studioSession} from '../auth';
+import {requireProject} from '../project-access';
+import {checkFileQuota} from '../file-quota';
+import {starterFiles} from '../project-starters';
+import {editablePath, FILE_LIMIT} from '../project-files';
 import type { DevPortalUser } from '@/lib/types';
 import { cookies } from 'next/headers';
 import { verifyToken } from '../jwt';
@@ -10,34 +18,7 @@ import { revalidatePath } from 'next/cache';
  * Récupère ou synchronise la session utilisateur Elite via cookies.
  */
 export async function getJojoAiSession(providedToken?: string) {
-    try {
-        let token = providedToken || cookies().get('dev_portal_token')?.value;
-        if (providedToken) {
-            cookies().set('dev_portal_token', providedToken, { 
-                path: '/', httpOnly: true, secure: true, sameSite: 'lax', maxAge: 60 * 60 * 24 * 7
-            });
-            token = providedToken;
-        }
-        if (!token) return { success: false };
-        const decoded = verifyToken(token);
-        if (!decoded) return { success: false };
-        const { rows } = await db.query('SELECT * FROM dev_portal_users WHERE id = $1', [decoded.id]);
-        if (rows.length === 0) return { success: false };
-        const user = rows[0] as DevPortalUser;
-        
-        // Initialisation silencieuse des crédits
-        try {
-            await db.query('INSERT INTO jojo_ai_credits (dev_portal_user_id, generation_credits) VALUES ($1, 10.00) ON CONFLICT DO NOTHING', [user.id]);
-        } catch (e) {
-            console.error('Failed to initialize user credits:', e);
-            // Table peut-être pas encore créée sur le VPS, on ignore pour ne pas bloquer la session
-        }
-        
-        return { success: true, user };
-    } catch (e) { 
-        console.error('getJojoAiSession error:', e);
-        return { success: false }; 
-    }
+    try { return await studioSession(providedToken); } catch {console.error('[Studio session] Identity database unavailable; verify AI database configuration.');return {success:false as const,reason:'SESSION_SERVICE_UNAVAILABLE' as const,error:'Impossible de vérifier votre compte développeur. La connexion PostgreSQL de JoJo AI doit être vérifiée.'};}
 }
 
 /**
@@ -47,10 +28,10 @@ export async function getProjectsForUser() {
     try {
         const session = await getJojoAiSession();
         if (!session.success || !session.user) return { success: false };
-        
+
         // Requête robuste gérant l'absence potentielle de la table pc
         const { rows } = await db.query(`
-            SELECT p.*, u.manager_name as owner_name, 
+            SELECT p.*, u.manager_name as owner_name,
             CASE WHEN p.dev_portal_user_id = $1 THEN 'owner' ELSE 'collaborator' END as user_role
             FROM jojo_ai_projects p
             LEFT JOIN dev_portal_users u ON p.dev_portal_user_id = u.id
@@ -60,18 +41,11 @@ export async function getProjectsForUser() {
             WHERE p.dev_portal_user_id = $1 OR pc.user_id = $1
             ORDER BY p.updated_at DESC
         `, [session.user.id]);
-        
+
         return { success: true, projects: rows };
-    } catch (e: any) { 
+    } catch (e: any) {
         console.error('getProjectsForUser query error:', e);
-        // Si les tables d'invitations manquent, on renvoie au moins les projets personnels
-        try {
-            const { rows } = await db.query('SELECT p.*, u.manager_name as owner_name, \'owner\' as user_role FROM jojo_ai_projects p LEFT JOIN dev_portal_users u ON p.dev_portal_user_id = u.id WHERE p.dev_portal_user_id = $1', [session?.user?.id]);
-            return { success: true, projects: rows };
-        } catch (innerErr) {
-            console.error('getProjectsForUser fallback error:', innerErr);
-            return { success: false, error: "Base de données non initialisée." }; 
-        }
+        return {success:false,error:"Impossible de lire les projets. Vérifiez la connexion et les migrations PostgreSQL."};
     }
 }
 
@@ -80,24 +54,25 @@ export async function getProjectsForUser() {
  */
 export async function inviteCollaborator(projectId: number, email: string) {
     try {
+        await requireProject(projectId,true);
         const session = await getJojoAiSession();
         if (!session.success || !session.user) throw new Error("Auth requise.");
 
         const { rows: userRows } = await db.query('SELECT id FROM dev_portal_users WHERE email = $1', [email]);
         if (userRows.length === 0) throw new Error("Utilisateur introuvable.");
-        
+
         const targetUserId = userRows[0].id;
 
         await db.query(`
-            INSERT INTO project_collaborators (project_id, user_id, role, status) 
-            VALUES ($1, $2, 'collaborator', 'pending') 
+            INSERT INTO project_collaborators (project_id, user_id, role, status)
+            VALUES ($1, $2, 'collaborator', 'pending')
             ON CONFLICT (project_id, user_id) DO NOTHING
         `, [projectId, targetUserId]);
 
         return { success: true };
-    } catch (e: any) { 
+    } catch (e: any) {
         console.error('inviteCollaborator error:', e);
-        return { success: false, error: e.message }; 
+        return { success: false, error: e.message };
     }
 }
 
@@ -109,117 +84,33 @@ export async function createJojoAiProject(data: { name: string, description: str
     try {
         const session = await getJojoAiSession();
         if (!session.success || !session.user) throw new Error("Authentification Elite requise.");
-        
+
+        if(typeof data.name!=='string'||!data.name.trim()||data.name.length>120||typeof data.description!=='string'||data.description.length>5000||!['empty','android','react','react-native','web','blog','music','video','fintech','ecommerce'].includes(data.template))throw new Error('Nom ou description invalide.');
         await connection.query('BEGIN');
-        
+        await connection.query('SELECT id FROM dev_portal_users WHERE id=$1 FOR UPDATE',[session.user.id]);
+        if(Number((await connection.query('SELECT COUNT(*)::int AS count FROM jojo_ai_projects WHERE dev_portal_user_id=$1',[session.user.id])).rows[0].count)>=50)throw new Error('Limite de 50 projets atteinte.');
         const { rows } = await connection.query(
-            'INSERT INTO jojo_ai_projects (dev_portal_user_id, name, description, app_template) VALUES ($1, $2, $3, $4) RETURNING id', 
+            'INSERT INTO jojo_ai_projects (dev_portal_user_id, name, description, app_template) VALUES ($1, $2, $3, $4) RETURNING id',
             [session.user.id, data.name, data.description, data.template]
         );
         const pid = rows[0].id;
-        
-        const slug = data.name.toLowerCase().replace(/\s+/g, '-');
-        let defaultFiles: { path: string, content: string }[] = [];
 
-        if (data.template === 'android' || data.template === 'react-native') {
-            defaultFiles = [
-                {
-                    path: 'App.tsx',
-                    content: `import React, { useState } from 'react';\nimport { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, SafeAreaView } from 'react-native';\n\nexport default function AndroidApp() {\n  const [count, setCount] = useState(0);\n  const [activeTab, setActiveTab] = useState<'home' | 'security' | 'stats'>('home');\n\n  return (\n    <SafeAreaView style={styles.container}>\n      <StatusBar barStyle="light-content" backgroundColor="#0B0F19" />\n      \n      {/* Android 14 Material Header */}\n      <View style={styles.header}>\n        <View>\n          <Text style={styles.headerSubtitle}>ANDROID 14 • PIXEL 8 PRO</Text>\n          <Text style={styles.headerTitle}>${data.name}</Text>\n        </View>\n        <View style={styles.badge}>\n          <Text style={styles.badgeText}>API 34</Text>\n        </View>\n      </View>\n\n      <ScrollView contentContainerStyle={styles.scrollContent}>\n        <View style={styles.card}>\n          <Text style={styles.cardTag}>INSTANCE ACTIVE</Text>\n          <Text style={styles.cardTitle}>${data.name}</Text>\n          <Text style={styles.cardDesc}>${data.description}</Text>\n          <TouchableOpacity style={styles.button} onPress={() => setCount(c => c + 1)}>\n            <Text style={styles.buttonText}>Action Android : {count} taps</Text>\n          </TouchableOpacity>\n        </View>\n\n        <View style={styles.telemetryBox}>\n          <Text style={styles.telemetryTitle}>Emulateur Status</Text>\n          <Text style={styles.telemetryText}>✓ Moteur Google Gemini Live actif</Text>\n          <Text style={styles.telemetryText}>✓ Pixel 8 Pro Émulateur Connecté</Text>\n          <Text style={styles.telemetryText}>✓ Hot Reloading Android 14</Text>\n        </View>\n      </ScrollView>\n    </SafeAreaView>\n  );\n}\n\nconst styles = StyleSheet.create({\n  container: { flex: 1, backgroundColor: '#0B0F19' },\n  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#1E293B' },\n  headerSubtitle: { color: '#06B6D4', fontSize: 10, fontWeight: '800', letterSpacing: 1.5 },\n  headerTitle: { color: '#FFFFFF', fontSize: 22, fontWeight: '900' },\n  badge: { backgroundColor: '#1E293B', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },\n  badgeText: { color: '#06B6D4', fontSize: 10, fontWeight: '700' },\n  scrollContent: { padding: 20 },\n  card: { backgroundColor: '#13192B', borderRadius: 24, padding: 24, borderWidth: 1, borderColor: '#1E293B', marginBottom: 20 },\n  cardTag: { color: '#06B6D4', fontSize: 10, fontWeight: '800', marginBottom: 6 },\n  cardTitle: { color: '#FFFFFF', fontSize: 20, fontWeight: '900', marginBottom: 6 },\n  cardDesc: { color: '#94A3B8', fontSize: 13, lineHeight: 20, marginBottom: 18 },\n  button: { backgroundColor: '#06B6D4', paddingVertical: 14, borderRadius: 16, alignItems: 'center' },\n  buttonText: { color: '#0B0F19', fontWeight: '900', fontSize: 13, textTransform: 'uppercase' },\n  telemetryBox: { backgroundColor: '#0F172A', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#1E293B' },\n  telemetryTitle: { color: '#CBD5E1', fontSize: 12, fontWeight: '800', textTransform: 'uppercase', marginBottom: 8 },\n  telemetryText: { color: '#10B981', fontSize: 11, marginBottom: 4 }\n});`
-                },
-                {
-                    path: 'app.json',
-                    content: JSON.stringify({
-                        expo: {
-                            name: data.name,
-                            slug: slug,
-                            version: "1.0.0",
-                            userInterfaceStyle: "dark",
-                            android: {
-                                package: `com.jojo.${slug.replace(/[^a-z0-9]/g, '')}`,
-                                targetSdkVersion: 34,
-                                permissions: ["INTERNET", "CAMERA", "USE_BIOMETRIC"]
-                            }
-                        }
-                    }, null, 2)
-                },
-                {
-                    path: 'android/AndroidManifest.xml',
-                    content: `<?xml version="1.0" encoding="utf-8"?>\n<manifest xmlns:android="http://schemas.android.com/apk/res/android"\n    package="com.jojo.${slug.replace(/[^a-z0-9]/g, '')}">\n    <uses-permission android:name="android.permission.INTERNET" />\n    <application android:label="${data.name}" android:theme="@style/Theme.Android14.Dark">\n        <activity android:name=".MainActivity" android:exported="true">\n            <intent-filter>\n                <action android:name="android.intent.action.MAIN" />\n                <category android:name="android.intent.category.LAUNCHER" />\n            </intent-filter>\n        </activity>\n    </application>\n</manifest>`
-                },
-                {
-                    path: 'package.json',
-                    content: JSON.stringify({
-                        name: slug,
-                        version: "1.0.0",
-                        main: "App.tsx",
-                        dependencies: {
-                            "react": "18.3.1",
-                            "react-native": "0.74.5",
-                            "expo": "~51.0.0"
-                        }
-                    }, null, 2)
-                }
-            ];
-        } else if (data.template === 'shoelace-ts') {
-            defaultFiles = [
-                {
-                    path: 'index.html',
-                    content: `<!DOCTYPE html>\n<html lang="fr" class="sl-theme-dark">\n<head>\n  <meta charset="UTF-8">\n  <title>${data.name} - Shoelace</title>\n  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.0/cdn/themes/dark.css" />\n  <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.0/cdn/shoelace-autoloader.js"></script>\n</head>\n<body style="background:#05070a;color:white;font-family:sans-serif;padding:2rem;">\n  <sl-card style="max-width:500px;margin:auto;">\n    <div slot="header"><h2>${data.name}</h2></div>\n    <p>${data.description}</p>\n    <sl-button variant="primary">Shoelace Button</sl-button>\n  </sl-card>\n  <script src="./src/main.ts"></script>\n</body>\n</html>`
-                },
-                {
-                    path: 'src/main.ts',
-                    content: `console.log("Shoelace & TypeScript app initialized: ${data.name}");`
-                },
-                {
-                    path: 'package.json',
-                    content: JSON.stringify({ name: slug, version: "1.0.0", dependencies: { "@shoelace-style/shoelace": "^2.15.0", "typescript": "^5.5.3" } }, null, 2)
-                }
-            ];
-        } else {
-            defaultFiles = [
-                {
-                    path: 'app/page.tsx',
-                    content: `export default function Page() {\n  return (\n    <main className="min-h-screen bg-[#05070a] text-white p-12 flex flex-col items-center justify-center">\n      <h1 className="text-4xl font-black mb-3">${data.name}</h1>\n      <p className="text-gray-400 max-w-md text-center mb-6">${data.description}</p>\n      <button className="px-6 py-3 bg-cyan-500 text-black font-black uppercase rounded-xl tracking-widest text-xs">\n        Lancer l'Application\n      </button>\n    </main>\n  );\n}`
-                },
-                {
-                    path: 'package.json',
-                    content: JSON.stringify({
-                        name: slug,
-                        version: "1.0.0",
-                        dependencies: {
-                            "next": "14.2.35",
-                            "react": "18.3.1",
-                            "react-dom": "18.3.1",
-                            "lucide-react": "0.414.0",
-                            "framer-motion": "11.3.17"
-                        }
-                    }, null, 2)
-                },
-                {
-                    path: 'tsconfig.json',
-                    content: JSON.stringify({
-                        compilerOptions: { target: "ES2017", lib: ["dom", "dom.iterable", "esnext"], allowJs: true, skipLibCheck: true, strict: true, noEmit: true, esModuleInterop: true, module: "esnext", moduleResolution: "bundler", resolveJsonModule: true, isolatedModules: true, jsx: "preserve" }
-                    }, null, 2)
-                }
-            ];
-        }
-
+        const defaultFiles = data.template === 'empty' ? [] : starterFiles(data.name, data.template);
         for (const file of defaultFiles) {
             await connection.query(
-                'INSERT INTO jojo_ai_project_files (project_id, file_path, file_content) VALUES ($1, $2, $3)', 
-                [pid, file.path, file.content]
+                'INSERT INTO jojo_ai_project_files (project_id, file_path, file_content, file_encoding, file_mode) VALUES ($1, $2, $3, $4, $5)',
+                [pid, file.path, file.content, file.encoding || 'utf8', file.mode || '100644']
             );
         }
-        
+
         await connection.query('COMMIT');
         return { success: true, data: { projectId: pid, appName: data.name } };
-    } catch (e: any) { 
+    } catch (e: any) {
         console.error('createJojoAiProject error:', e);
-        if (connection) await connection.query('ROLLBACK'); 
-        return { success: false, error: e.message }; 
-    } finally { 
-        connection.release(); 
+        if (connection) await connection.query('ROLLBACK');
+        return { success: false, error: e.message };
+    } finally {
+        connection.release();
     }
 }
 
@@ -228,11 +119,12 @@ export async function createJojoAiProject(data: { name: string, description: str
  */
 export async function getProjectFileTree(projectId: number) {
     try {
+        await requireProject(projectId);
         const { rows } = await db.query('SELECT file_path FROM jojo_ai_project_files WHERE project_id = $1 ORDER BY file_path ASC', [projectId]);
         return { success: true, files: rows.map(r => r.file_path) };
-    } catch (e) { 
+    } catch (e) {
         console.error('getProjectFileTree error:', e);
-        return { success: false, files: [] }; 
+        return { success: false, files: [] };
     }
 }
 
@@ -241,66 +133,62 @@ export async function getProjectFileTree(projectId: number) {
  */
 export async function getFileContent(projectId: number, filePath: string) {
     try {
-        const { rows } = await db.query('SELECT file_content FROM jojo_ai_project_files WHERE project_id = $1 AND file_path = $2', [projectId, filePath]);
+        await requireProject(projectId); editablePath(filePath);
+        const { rows } = await db.query('SELECT file_content,file_encoding FROM jojo_ai_project_files WHERE project_id = $1 AND file_path = $2', [projectId, filePath]);
+        if(!rows[0])throw new Error('Fichier introuvable.');
+        if(Buffer.byteLength(rows[0].file_content)>512*1024)throw new Error('Ce fichier dépasse la limite de l’éditeur (512 Ko). Utilisez l’export ZIP.');
+        if(rows[0]?.file_encoding==='base64')throw new Error('Fichier binaire : disponible dans l’export ZIP.');
         return { success: true, content: rows[0]?.file_content || '' };
-    } catch (e) { 
-        console.error('getFileContent error:', e);
-        return { success: false, content: '' }; 
+    } catch (e:any) {
+        return { success: false, content: '', error:e.message };
     }
 }
 
-export async function saveFileContent(projectId: number, filePath: string, content: string) {
-    try {
-        await db.query('UPDATE jojo_ai_project_files SET file_content = $1 WHERE project_id = $2 AND file_path = $3', [content, projectId, filePath]);
-        await db.query('UPDATE jojo_ai_projects SET updated_at = NOW() WHERE id = $1', [projectId]);
-        return { success: true };
-    } catch (e: any) { 
-        console.error('saveFileContent error:', e);
-        return { success: false, error: e.message }; 
-    }
+export async function saveFileContent(projectId:number,filePath:string,content:string){
+ let c;
+ try{await requireProject(projectId);editablePath(filePath);if(typeof content!=='string'||Buffer.byteLength(content)>FILE_LIMIT)throw Error('Fichier trop volumineux.');c=await db.getConnection();await c.query('BEGIN');await checkFileQuota(c,projectId,filePath,content);const changed=await c.query("UPDATE jojo_ai_project_files SET file_content=$1 WHERE project_id=$2 AND file_path=$3 AND file_encoding='utf8'",[content,projectId,filePath]);if(!changed.rowCount)throw Error('Fichier texte introuvable.');await c.query('UPDATE jojo_ai_projects SET updated_at=now() WHERE id=$1',[projectId]);await c.query('COMMIT');return {success:true};}
+ catch(e:any){await c?.query('ROLLBACK');return {success:false,error:e.message};}finally{c?.release();}
 }
 
 export async function getPendingActions(projectId: number) {
     try {
-        const { rows } = await db.query("SELECT * FROM project_pending_actions WHERE project_id = $1 AND status = 'pending' ORDER BY created_at ASC", [projectId]);
+        await requireProject(projectId);
+        const { rows } = await db.query("SELECT * FROM project_pending_actions WHERE project_id = $1 AND status = 'pending' ORDER BY created_at ASC LIMIT 100", [projectId]);
         return { success: true, actions: rows };
-    } catch (e) { 
+    } catch (e) {
         console.error('getPendingActions error:', e);
-        return { success: false, actions: [] }; 
+        return { success: false, actions: [] };
     }
 }
 
-export async function approvePendingAction(actionId: number) {
-    const connection = await db.getConnection();
-    try {
-        await connection.query('BEGIN');
-        const { rows } = await connection.query('SELECT * FROM project_pending_actions WHERE id = $1', [actionId]);
-        if (rows.length === 0) throw new Error("Action introuvable.");
-        const action = rows[0];
-        await connection.query(
-            `INSERT INTO jojo_ai_project_files (project_id, file_path, file_content) VALUES ($1, $2, $3) ON CONFLICT (project_id, file_path) DO UPDATE SET file_content = EXCLUDED.file_content`,
-            [action.project_id, action.file_path, action.content]
-        );
-        await connection.query("UPDATE project_pending_actions SET status = 'approved' WHERE id = $1", [actionId]);
-        await connection.query('UPDATE jojo_ai_projects SET updated_at = NOW() WHERE id = $1', [action.project_id]);
-        await connection.query('COMMIT');
-        return { success: true };
-    } catch (e: any) { 
-        console.error('approvePendingAction error:', e);
-        if (connection) await connection.query('ROLLBACK'); 
-        return { success: false, error: e.message }; 
-    } finally { 
-        connection.release(); 
-    }
+async function applyProposal(connection:any,action:any){
+ await checkFileQuota(connection,Number(action.project_id),action.file_path,action.content,action.file_encoding||'utf8');
+ const current=(await connection.query('SELECT file_content FROM jojo_ai_project_files WHERE project_id=$1 AND file_path=$2',[action.project_id,action.file_path])).rows[0];
+ const currentHash=current?createHash('sha256').update(current.file_content).digest('hex'):'absent';
+ if(!action.base_hash||currentHash!==action.base_hash)throw Error('Un fichier a changé depuis la proposition. Rejetez-la puis demandez une nouvelle génération.');
+ if(action.status!=='pending')throw Error('Action déjà traitée.');editablePath(action.file_path);
+ const encoding=action.file_encoding||'utf8';if(!['utf8','base64'].includes(encoding)||Buffer.byteLength(action.content,encoding==='base64'?'base64':'utf8')>FILE_LIMIT)throw Error('Fichier trop volumineux ou encodage invalide.');
+ await connection.query(`INSERT INTO jojo_ai_project_files(project_id,file_path,file_content,file_encoding) VALUES($1,$2,$3,$4) ON CONFLICT(project_id,file_path) DO UPDATE SET file_content=EXCLUDED.file_content,file_encoding=EXCLUDED.file_encoding`,[action.project_id,action.file_path,action.content,encoding]);
+ await connection.query("UPDATE project_pending_actions SET status='approved' WHERE id=$1",[action.id]);
+ await connection.query('UPDATE jojo_ai_projects SET updated_at=now() WHERE id=$1',[action.project_id]);
 }
+export async function approvePendingAction(actionId:number){let c;try{
+ c=await db.getConnection();await c.query('BEGIN');const action=(await c.query('SELECT * FROM project_pending_actions WHERE id=$1 FOR UPDATE',[actionId])).rows[0];if(!action)throw Error('Action introuvable.');await requireProject(Number(action.project_id));await applyProposal(c,action);await c.query('COMMIT');return {success:true};
+}catch(e:any){await c?.query('ROLLBACK');return {success:false,error:e.message};}finally{c?.release();}}
+export async function approveAllPendingActions(projectId:number){let c;try{
+ await requireProject(projectId);c=await db.getConnection();await c.query('BEGIN');
+ const actions=(await c.query("SELECT * FROM project_pending_actions WHERE project_id=$1 AND status='pending' ORDER BY id FOR UPDATE",[projectId])).rows;
+ for(const action of actions)await applyProposal(c,action);await c.query('COMMIT');return {success:true,count:actions.length};
+}catch(e:any){await c?.query('ROLLBACK');return {success:false,error:e.message};}finally{c?.release();}}
 
 export async function rejectPendingAction(actionId: number) {
-    try { 
-        await db.query("UPDATE project_pending_actions SET status = 'rejected' WHERE id = $1", [actionId]); 
-        return { success: true }; 
-    } catch (e) { 
+    try { const found=await db.query('SELECT project_id FROM project_pending_actions WHERE id=$1',[actionId]);if(!found.rows[0])throw new Error('Action introuvable.');await requireProject(Number(found.rows[0].project_id));
+
+        await db.query("UPDATE project_pending_actions SET status = 'rejected' WHERE id = $1", [actionId]);
+        return { success: true };
+    } catch (e) {
         console.error('rejectPendingAction error:', e);
-        return { success: false }; 
+        return { success: false };
     }
 }
 
@@ -308,82 +196,88 @@ export async function getCredits() {
     try {
         const session = await getJojoAiSession();
         if (!session.success || !session.user) return { success: false, credits: 0 };
-        const { rows } = await db.query('SELECT generation_credits FROM jojo_ai_credits WHERE dev_portal_user_id = $1', [session.user.id]);
-        return { success: true, credits: rows[0] ? parseFloat(rows[0].generation_credits) : 0 };
+        const balance=await generationBalance(session.user.id);return {success:true,credits:balance.total,daily:balance.daily,extra:balance.extra};
     } catch (e) {
         console.error('getCredits error:', e);
-        return { success: false, credits: 10.00 };
+        return { success: false, credits: 0 };
     }
 }
 
 export async function deleteProject(projectId: number) {
-    try { 
-        await db.query('DELETE FROM jojo_ai_projects WHERE id = $1', [projectId]); 
-        return { success: true }; 
-    } catch (e) { 
+    try {
+        await requireProject(projectId,true);
+        if((await db.query('SELECT id FROM project_databases WHERE project_id=$1 LIMIT 1',[projectId])).rowCount)throw Error('Supprimez d’abord les bases dédiées avec votre administrateur.');
+        await db.query('DELETE FROM jojo_ai_projects WHERE id = $1', [projectId]);
+        return { success: true };
+    } catch (e) {
         console.error('deleteProject error:', e);
-        return { success: false }; 
+        return { success: false };
     }
 }
 
 export async function getProjectDatabases(projectId: number) {
-    try { 
-        const { rows } = await db.query('SELECT * FROM project_databases WHERE project_id = $1', [projectId]); 
-        return { success: true, databases: rows }; 
-    } catch (e) { 
-        console.error('getProjectDatabases error:', e);
-        return { success: false, databases: [] }; 
-    }
-}
-
-export async function provisionNewDatabase(projectId: number, config: { name: string, type: 'pg' | 'mysql', user: string, pass: string }) {
     try {
-        const url = `${config.type}://${config.user}:${config.pass}@127.0.0.1:5432/${config.name}`;
-        const managerUrl = `https://cashpay-all.com/db-admin/adminer.php?engine=${config.type === 'pg' ? 'pgsql' : 'server'}`;
-        await db.query('INSERT INTO project_databases (project_id, name, type, url, manager_url) VALUES ($1, $2, $3, $4, $5)', [projectId, config.name, config.type, url, managerUrl]);
-        return { success: true };
-    } catch (e: any) { 
-        console.error('provisionNewDatabase error:', e);
-        return { success: false, error: e.message }; 
+        await requireProject(projectId,true);
+        const { rows } = await db.query('SELECT id,project_id,name,type,manager_url,created_at FROM project_databases WHERE project_id = $1', [projectId]);
+        return { success: true, databases: rows };
+    } catch (e) {
+        console.error('getProjectDatabases error:', e);
+        return { success: false, databases: [] };
     }
 }
 
-export async function runSqlQuery(projectId: number, dbId: number, sql: string) {
-    try { 
-        return { success: true }; 
-    } catch (e: any) { 
-        console.error('runSqlQuery error:', e);
-        return { success: false, error: e.message }; 
-    }
+export async function provisionNewDatabase(projectId:number,config:{name:string,type:'pg'|'mysql',user:string,pass:string}) {
+    return provisionProjectDatabase(projectId,config);
+}
+export async function runSqlQuery(projectId:number,dbId:number,sql:string) {
+    return queryProjectDatabase(projectId,dbId,sql);
 }
 
 export async function toggleProjectVisibility(projectId: number, isPublic: boolean) {
     try {
+        await requireProject(projectId,true);
         await db.query('UPDATE jojo_ai_projects SET is_public = $1 WHERE id = $2', [isPublic, projectId]);
         return { success: true };
-    } catch (e: any) { 
+    } catch (e: any) {
         console.error('toggleProjectVisibility error:', e);
-        return { success: false, error: e.message }; 
+        return { success: false, error: e.message };
     }
 }
 
-export async function createFileSystemItem(projectId: number, path: string, type: 'file' | 'folder') {
-    try {
-        const content = type === 'folder' ? '' : '';
-        const finalPath = type === 'folder' ? `${path}/.keep` : path;
-        await db.query('INSERT INTO jojo_ai_project_files (project_id, file_path, file_content) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [projectId, finalPath, content]);
-        return { success: true };
-    } catch (e: any) { 
-        console.error('createFileSystemItem error:', e);
-        return { success: false, error: e.message }; 
-    }
+export async function createFileSystemItem(projectId:number,path:string,type:'file'|'folder'){
+ let c;try{await requireProject(projectId);if(!['file','folder'].includes(type))throw Error('Type invalide.');const finalPath=editablePath(type==='folder'?path+'/.gitkeep':path);c=await db.getConnection();await c.query('BEGIN');await checkFileQuota(c,projectId,finalPath,'');const result=await c.query('INSERT INTO jojo_ai_project_files(project_id,file_path,file_content) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',[projectId,finalPath,'']);if(!result.rowCount)throw Error('Le fichier existe déjà.');await c.query('COMMIT');return {success:true};}catch(e:any){await c?.query('ROLLBACK');return {success:false,error:e.message};}finally{c?.release();}
 }
 
-export async function triggerBuild(projectId: number) {
-    try { 
-        return { success: true }; 
-    } catch (e: any) { 
-        console.error('triggerBuild error:', e);
-        return { success: false, error: e.message }; 
-    }
+export async function triggerBuild(projectId:number) {
+    try {await requireProject(projectId);return {success:false,error:"Lancez la compilation depuis le panneau Exécution : un worker isolé doit être configuré."};}
+    catch {return {success:false,error:"Accès refusé."};}
+}
+
+export async function getProjectInvitations(){try{const s=await studioSession();if(!s.success||!s.user)throw Error('Session requise.');const {rows}=await db.query("SELECT c.id,p.name FROM project_collaborators c JOIN jojo_ai_projects p ON p.id=c.project_id WHERE c.user_id=$1 AND c.status='pending'",[s.user.id]);return {success:true,invitations:rows};}catch{return {success:false,invitations:[]};}}
+export async function respondToProjectInvitation(id:number,accept:boolean){try{const s=await studioSession();if(!s.success||!s.user)throw Error('Session requise.');const r=await db.query("UPDATE project_collaborators SET status=$1,accepted_at=CASE WHEN $1='accepted' THEN now() ELSE NULL END WHERE id=$2 AND user_id=$3 AND status='pending'",[accept?'accepted':'rejected',id,s.user.id]);return {success:r.rowCount===1};}catch{return {success:false};}}
+
+export async function updateProjectDetails(projectId:number,name:string,description:string){
+ try{
+  await requireProject(projectId,true);
+  if(typeof name!=='string'||!name.trim()||name.length>120||typeof description!=='string'||description.length>5000)throw Error('Nom ou description invalide.');
+  await db.query('UPDATE jojo_ai_projects SET name=$1,description=$2,updated_at=now() WHERE id=$3',[name.trim(),description,projectId]);
+  return {success:true};
+ }catch(e:any){return {success:false,error:e.message};}
+}
+
+export async function duplicateProject(projectId:number){
+ let c;
+ try{
+  const {user,project}=await requireProject(projectId,true);
+  c=await db.getConnection();await c.query('BEGIN');
+  await c.query('SELECT id FROM dev_portal_users WHERE id=$1 FOR UPDATE',[user.id]);
+  if(Number((await c.query('SELECT COUNT(*)::int AS count FROM jojo_ai_projects WHERE dev_portal_user_id=$1',[user.id])).rows[0].count)>=50)throw Error('Limite de 50 projets atteinte.');
+  const copyName=(String(project.name).slice(0,112)+' (copie)').slice(0,120);
+  const created=await c.query('INSERT INTO jojo_ai_projects (dev_portal_user_id,name,description,app_template,is_public) VALUES ($1,$2,$3,$4,false) RETURNING id',[user.id,copyName,project.description,project.app_template]);
+  const newId=created.rows[0].id;
+  await c.query('INSERT INTO jojo_ai_project_files(project_id,file_path,file_content,file_encoding,file_mode) SELECT $1,file_path,file_content,file_encoding,file_mode FROM jojo_ai_project_files WHERE project_id=$2',[newId,projectId]);
+  await c.query('COMMIT');
+  return {success:true,projectId:newId};
+ }catch(e:any){await c?.query('ROLLBACK');return {success:false,error:e.message};}
+ finally{c?.release();}
 }
