@@ -94,3 +94,13 @@ test('Git review reports added, changed and deleted files and preserves independ
  assert.notEqual(snapshotDigest(base),snapshotDigest(local));
  assert.deepEqual(mergeGitFiles(base,local,[f('keep.txt','same'),f('delete.txt','gone'),f('edit.txt','external')]).conflicts,['edit.txt']);
 });
+const {domainRetailQuote}=require('../src/lib/domain-search.ts');
+test('retail domain prices add 15 percent once and preserve the real currency and term',()=>{
+ const info={status:'AVAILABLE',price:11.4,currency:'USD',period:2};
+ assert.deepEqual(domainRetailQuote(info),{amount:13.11,currency:'USD',periodYears:2,markupPercent:15});
+ assert.equal(domainRetailQuote({...info,price:10}).amount,11.5);
+ assert.equal(domainRetailQuote({...info,price:2.5}).amount,2.88);
+ assert.equal(domainRetailQuote({...info,price:10.01}).amount,11.51);
+ for(const change of [{price:undefined},{price:'11.40'},{price:-1},{price:NaN},{price:0},{currency:'???'},{period:undefined},{period:0},{period:1.5},{status:'NOTAVAILABLE'}])assert.equal(domainRetailQuote({...info,...change}),null);
+ assert.equal(normalizeSearchResults(['x.com'],{infos:[{domainName:'x.com',...info}]} )[0].quote.amount,13.11);
+});

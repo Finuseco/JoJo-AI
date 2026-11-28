@@ -82,3 +82,33 @@ icons load, and the page has no horizontal overflow. Session data was a test-onl
 fixture; the search status used the real unauthenticated API (no availability
 fabricated). Existing WebView browser regression passed home → nested page → home.
 No registrar account, payment, domain registration or VPS deployment was exercised.
+
+## Public homepage search and prices (2026-11-28)
+
+`/api/public/domains/search` exposes availability to anonymous visitors through
+server-side credentials, same-origin POST, bounded body/response sizes and a
+shared five-second public cooldown per process. The existing provider limits
+remain authoritative with multiple PM2 workers. The homepage and studio use the
+same live result normalizer. No static TLD price list or simulated fallback.
+
+Displayed registration price = API `price` × 1.15, rounded to the nearest cent.
+The actual `currency` and `period` are retained (the term is not assumed annual).
+USD/EUR/TRY/GBP quotes are supported; missing/invalid values or another currency
+produce “Prix indisponible”, never an invented conversion. Taken domains have
+no registration offer. Premium/document flags remain visible.
+
+The provider documents `price` as a selling quote which may already include
+account-side margin. JoJo adds the requested 15% on top of that received value;
+check the reseller panel's price settings to avoid an unintended second margin.
+No renewal, tax or hosting amount is inferred from this registration quote.
+Checkout is still not enabled; the interface explicitly says so.
+
+The same two existing variables suffice: DOMAIN_API_KEY and
+DOMAIN_API_RESELLER_ID. No new secret, dependency, database migration or worker.
+Live account prices cannot be validated until production credentials are supplied.
+
+Validation of homepage addition: npm test and npm run build passed. Chromium
+390px check used the real public route without credentials: HTTP 503, explicit
+unconfigured message, no result/price cards, no horizontal overflow. Foreign
+Origin POST returned 403. Retail tests cover 15% rounding, duration preservation,
+invalid/missing quotes and taken domains. No authenticated live quote was tested.

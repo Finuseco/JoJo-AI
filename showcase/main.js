@@ -1,6 +1,7 @@
 (() => {
   'use strict';
   const en = {
+'domain-eyebrow':'Your address on the web','domain-title':'Find a name for your next project.','domain-desc':'Search .com, .net, .fr or enter another extension. Availability and prices are checked with our partner.','domain-label':'Domain name','domain-button':'Search','domain-note':'Indicative registration prices for the displayed term. Hosting and renewal are not included. Searching does not reserve a name; purchasing in JoJo AI is not available yet.','domain-start':'Start my project without a domain →',
 'exchange-eyebrow':'Explain, receive, collaborate','exchange-title':'Your request becomes a conversation.','exchange-desc':'Keep discussions and files in your project context, then review the assistant’s proposals before applying them.','exchange-voice-title':'Dictate your request','exchange-voice-desc':'Use the chat microphone to turn speech into text. Review and correct the transcript before sending it to the assistant. A configured OpenAI key and microphone permission are required.','exchange-files-title':'Attach your references','exchange-files-desc':'Send images, a PDF or text documents with your message. Receive the response in chat and review proposed files in the changes panel.','exchange-team-title':'Share the project','exchange-team-desc':'Invite a CashPay developer by email from your projects. After accepting, they join the same project. To publish your code, connect GitHub and send a commit from the GitHub panel.',
 'appview-eyebrow':'Android AppView · In development','appview-title':'Your code. An APK. Real Android.','appview-desc':'Design native Android or React Native applications in JoJo AI. AppView aims to bring building, installation and interactive testing on the official Google emulator into the studio.','appview-build':'Build your project','appview-build-desc':'Real sources and dependencies, build logs and downloadable APKs after validation.','appview-run':'Test on Android','appview-run-desc':'Install the APK on the official Android Emulator and interact with its streamed display in your browser.','appview-repeat':'Edit and repeat','appview-repeat-desc':'Develop your app, keep your sources and synchronize changes with GitHub.','appview-status':'The integrated workflow will be available after build workers and interactive streaming have been validated. This illustration is not a live session.','appview-cta':'Prepare my project','appview-caption':'Android Studio reference: Pixel 6 Pro / API 33. Planned JoJo AI configuration: Pixel 7 / API 34.',
     skip:'Skip to content','brand-sub':'One workspace. Every idea.','nav-features':'Features','nav-how':'How it works','nav-credits':'Credits','nav-faq':'Questions','nav-studio':'Open studio',
@@ -38,4 +39,30 @@
   document.addEventListener('click',event=>{if(!menu.contains(event.target)&&!toggle.contains(event.target))closeMenu();});
   document.getElementById('year').textContent=String(new Date().getFullYear());
   if('IntersectionObserver' in window){document.documentElement.classList.add('js');const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('visible');observer.unobserve(entry.target);}}),{threshold:.08});document.querySelectorAll('.reveal').forEach(node=>observer.observe(node));}
+
+  const domainForm=document.getElementById('domain-search-form');
+  if(domainForm){
+    const input=document.getElementById('domain-search-name'),status=document.getElementById('domain-search-status'),results=document.getElementById('domain-search-results'),button=domainForm.querySelector('button');
+    const english=()=>document.documentElement.lang==='en';
+    let pending=false;
+    domainForm.addEventListener('submit',async event=>{
+      event.preventDefault();if(pending)return;pending=true;button.disabled=true;input.disabled=true;results.replaceChildren();status.textContent=english()?'Checking with our partner…':'Vérification auprès de notre partenaire…';
+      try{
+        const response=await fetch('/api/public/domains/search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:input.value})});
+        const data=await response.json();if(!response.ok)throw Error(data.error||'Recherche indisponible.');
+        for(const result of data.results){
+          const card=document.createElement('article'),heading=document.createElement('h3'),state=document.createElement('p');card.className='domain-result';heading.textContent=result.domain;
+          state.textContent=result.status==='AVAILABLE'?(english()?'Available now':'Disponible maintenant'):result.status==='NOTAVAILABLE'?(english()?'Already registered':'Déjà enregistré'):(english()?'Availability unverified':'Disponibilité non vérifiée');card.append(heading,state);
+          if(result.status==='AVAILABLE'){
+            const price=document.createElement('p');price.className='domain-price';const q=result.quote;
+            price.textContent=q?new Intl.NumberFormat(english()?'en-US':'fr-FR',{style:'currency',currency:q.currency}).format(q.amount)+(english()?` / ${q.periodYears} year(s)`:` / ${q.periodYears} an(s)`):(english()?'Price unavailable':'Prix indisponible');card.append(price);
+          }
+          if(result.premium){const tag=document.createElement('p');tag.textContent=english()?'Premium domain':'Domaine premium';card.append(tag);}
+          if(result.documentsRequired){const note=document.createElement('p');note.textContent=english()?'Supporting documents may be required.':'Des justificatifs peuvent être requis.';card.append(note);}
+          results.append(card);
+        }
+        status.textContent=(english()?'Checked: ':'Vérifié le ')+new Date(data.checkedAt).toLocaleString(english()?'en-US':'fr-FR');
+      }catch(error){status.textContent=error.message||'Recherche indisponible.';}finally{pending=false;button.disabled=false;input.disabled=false;}
+    });
+  }
 })();

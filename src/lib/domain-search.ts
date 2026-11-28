@@ -10,11 +10,18 @@ export function searchNames(input:unknown):string[]{
  if(!name||name.length>63||!name.split('.').every(x=>/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(x)))throw new DomainSearchError('Nom invalide : saisissez le nom sans https:// ni chemin.',400);
  return name.includes('.')?[name]:['com','net','fr'].map(tld=>name+'.'+tld);
 }
+/** Mark up the live quote once. Never substitute catalogue examples for a missing quote. */
+export function domainRetailQuote(info:any){
+ if(info?.status!=='AVAILABLE'||typeof info.price!=='number'||!Number.isFinite(info.price)||info.price<=0||info.price>1e9||typeof info.currency!=='string'||!['USD','EUR','TRY','GBP'].includes(info.currency)||!Number.isInteger(info.period)||info.period<1||info.period>10)return null;
+ // Supported provider currencies use cents. Round half up after applying the 15% markup.
+ const amount=Math.round(info.price*115+1e-8)/100;
+ return {amount,currency:info.currency,periodYears:info.period,markupPercent:15};
+}
 export function normalizeSearchResults(names:string[],payload:any){
  if(!Array.isArray(payload?.infos))throw new DomainSearchError('Réponse du fournisseur illisible. Disponibilité non vérifiée.');
  return names.map(domain=>{const matches=payload.infos.filter((x:any)=>typeof x?.domainName==='string'&&x.domainName.toLowerCase()===domain);const info=matches.length===1?matches[0]:null;
  const status=['AVAILABLE','NOTAVAILABLE'].includes(info?.status)?info.status:'UNKNOWN';
- return {domain,status,premium:info?.isPremium===true,documentsRequired:info?.isDocumentRequired===true};
+ return {domain,status,quote:domainRetailQuote(info),premium:info?.isPremium===true,documentsRequired:info?.isDocumentRequired===true};
  });
 }
 export async function searchDomains(input:unknown){
