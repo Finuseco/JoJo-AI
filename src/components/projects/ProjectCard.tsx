@@ -1,4 +1,5 @@
 'use client';
+import {ProjectAvatar} from '@/components/branding/ProjectAvatar';
 import {TechnologyIcon} from '@/components/icons/TechnologyIcon';
 import {projectTechnology} from '@/lib/technology-icons';
 import {useState} from 'react';
@@ -28,7 +29,7 @@ export function ProjectCard({project,onOpen,onChanged}:{project:any;onOpen:()=>v
  const action='inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-2.5 py-1.5 text-xs text-zinc-300 transition hover:border-violet-400/60 hover:text-white disabled:opacity-50';
  return <div className="jojo-project-card group rounded-2xl border border-white/10 bg-white/[.03] p-4 sm:p-5">
   <button type="button" onClick={onOpen} className="block w-full text-left">
-   <TechnologyIcon kind={projectTechnology(project.app_template).icon} className="mb-3 sm:mb-5" size={30}/>
+   <ProjectAvatar project={project}/>
    <div className="flex items-center justify-between"><h3 className="truncate pr-3 font-medium">{project.name}</h3><ArrowRight size={16} className="text-zinc-500 group-hover:text-violet-300"/></div>
    <p className="mt-2 line-clamp-2 text-sm text-zinc-500">{project.description||'Projet sans description'}</p>
    <p className="mt-3 text-xs text-zinc-500">{projectTechnology(project.app_template).label} · {owner?'Propriétaire':'Collaborateur'} · {project.is_public?'Public':'Privé'}</p>

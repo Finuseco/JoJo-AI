@@ -6,7 +6,7 @@ function privateAddress(ip:string){
  if(net.isIPv4(ip)){const [a,b]=ip.split('.').map(Number);return a===0||a===10||a===127||(a===100&&b>=64&&b<=127)||(a===169&&b===254)||(a===172&&b>=16&&b<=31)||(a===192&&b===168)||(a===192&&b===0)||a>=224;}
  const v=ip.toLowerCase();return v==='::1'||v==='::'||v.startsWith('fc')||v.startsWith('fd')||v.startsWith('fe80')||v.startsWith('::ffff:')||v.startsWith('ff');
 }
-const safeLookup:any=(host:string,options:any,callback:any)=>{
+export const safeLookup:any=(host:string,options:any,callback:any)=>{
  dns.lookup(host,{...options,all:true},(error:any,addresses:any)=>{
   if(error)return callback(error);
   if(!addresses.length||addresses.some((a:any)=>privateAddress(a.address)))return callback(new Error('Adresse non autorisée.'));

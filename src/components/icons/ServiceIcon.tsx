@@ -1,0 +1,1 @@
+export function ServiceIcon({service,size=18}:{service:'github'|'googledrive'|'icloud';size?:number}){return <img src={`/services/${service}.svg`} alt="" aria-hidden="true" width={size} height={size} className="shrink-0 object-contain" style={{width:size,height:size}}/>;}
