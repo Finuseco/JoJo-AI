@@ -13,3 +13,7 @@ export function mergeGitFiles(base:ProjectFile[],local:ProjectFile[],remote:Proj
  }
  return {files,conflicts};
 }
+export function gitFileChanges(before:ProjectFile[],after:ProjectFile[]){
+ const a=new Map(before.map(f=>[f.path,f])),b=new Map(after.map(f=>[f.path,f]));
+ return [...new Set([...a.keys(),...b.keys()])].sort().flatMap(path=>digest(a.get(path))===digest(b.get(path))?[]:[{path,status:!a.has(path)?'added':!b.has(path)?'deleted':'modified'}]);
+}

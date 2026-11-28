@@ -84,3 +84,13 @@ test('domain provider transport uses live server headers and handles refusal wit
   global.fetch=async()=>new Response('<html>error</html>');await assert.rejects(searchDomains('example.com'),/invalide/);
  }finally{global.fetch=savedFetch;if(oldKey===undefined)delete process.env.DOMAIN_API_KEY;else process.env.DOMAIN_API_KEY=oldKey;if(oldId===undefined)delete process.env.DOMAIN_API_RESELLER_ID;else process.env.DOMAIN_API_RESELLER_ID=oldId;}
 });
+const {gitFileChanges,mergeGitFiles,snapshotDigest}=require('../src/lib/git-sync.ts');
+test('Git review reports added, changed and deleted files and preserves independent changes',()=>{
+ const f=(path,content)=>({path,content,encoding:'utf8'});
+ const base=[f('keep.txt','same'),f('delete.txt','gone'),f('edit.txt','old')],local=[f('keep.txt','same'),f('edit.txt','new'),f('added.txt','new')];
+ assert.deepEqual(gitFileChanges(base,local),[{path:'added.txt',status:'added'},{path:'delete.txt',status:'deleted'},{path:'edit.txt',status:'modified'}]);
+ const remote=[...base,f('remote.txt','external')],merged=mergeGitFiles(base,local,remote);
+ assert.deepEqual(merged.conflicts,[]);assert.equal(merged.files.some(f=>f.path==='delete.txt'),false);assert.equal(merged.files.some(f=>f.path==='remote.txt'),true);
+ assert.notEqual(snapshotDigest(base),snapshotDigest(local));
+ assert.deepEqual(mergeGitFiles(base,local,[f('keep.txt','same'),f('delete.txt','gone'),f('edit.txt','external')]).conflicts,['edit.txt']);
+});

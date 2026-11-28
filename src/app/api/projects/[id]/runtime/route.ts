@@ -8,6 +8,7 @@ import {parseCommand} from '../../../../../../server/runtime/commands.cjs';
 export const dynamic='force-dynamic';
 export async function GET(request:Request,{params}:{params:{id:string}}){try{
  const {project,isOwner}=await requireProject(Number(params.id));
+ const query=new URL(request.url).searchParams;if(query.get('view')==='files'){const siteId=query.get('siteId')||'';if(!/^[a-f0-9]{32}$/.test(siteId))throw Error('Site invalide.');return NextResponse.json(await runtimeRunner(`/v1/site-files?userId=${project.dev_portal_user_id}&projectId=${params.id}&siteId=${siteId}`),{headers:{'Cache-Control':'private,no-store'}});}
  const jobId=new URL(request.url).searchParams.get('jobId');if(jobId&&!/^[0-9a-f-]{36}$/.test(jobId))throw Error('Job invalide.');
  const info={previewPath:`/p/${params.id}`,isPublic:Boolean(project.is_public),canExecute:isOwner};
  if(!process.env.RUNTIME_RUNNER_URL)return NextResponse.json({...info,configured:false,jobs:[],site:null});

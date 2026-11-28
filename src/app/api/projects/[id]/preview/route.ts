@@ -7,7 +7,7 @@ export async function GET(_:Request,{params}:{params:{id:string}}){try{
  const project=(await db.query('SELECT is_public,dev_portal_user_id,app_template FROM jojo_ai_projects WHERE id=$1',[id])).rows[0];if(!project)throw Error();
  let member=false;try{await requireProject(id);member=true;}catch{}if(!project.is_public&&!member)throw Error();
  let publishedUrl:string|null=null;
- if(process.env.RUNTIME_RUNNER_URL){try{const state=await runtimeRunner(`/v1/jobs?userId=${project.dev_portal_user_id}&projectId=${id}`);if(state.site?.url){const url=new URL(state.site.url),studio=new URL(process.env.STUDIO_PUBLIC_ORIGIN||'http://localhost');if(url.protocol==='https:'&&url.origin!==studio.origin)publishedUrl=url.toString();}}catch{}}
+ if(process.env.RUNTIME_RUNNER_URL){try{const state=await runtimeRunner(`/v1/jobs?userId=${project.dev_portal_user_id}&projectId=${id}`);if(state.site?.url){const primary=state.site.primaryDomain,selected=primary&&state.site.domains?.[primary]?.verified?'https://'+primary:state.site.url;const url=new URL(selected),studio=new URL(process.env.STUDIO_PUBLIC_ORIGIN||'http://localhost');if(url.protocol==='https:'&&url.origin!==studio.origin)publishedUrl=url.toString();}}catch{}}
  if(publishedUrl)return NextResponse.json({publishedUrl,files:[],requiresBuild:false},{headers:{'Cache-Control':'private,no-store'}});
  const {rows}=await db.query('SELECT file_path AS path,file_content AS content,file_encoding AS encoding FROM jojo_ai_project_files WHERE project_id=$1 ORDER BY file_path',[id]);
  let requiresBuild=false;try{requiresBuild=Boolean(JSON.parse(rows.find(f=>f.path==='package.json')?.content||'{}').scripts?.build);}catch{}
