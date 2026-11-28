@@ -53,13 +53,13 @@ export default function ProjectPreviewPage(){const {id}=useParams();const [html,
   (async()=>{try{const r=await fetch(`/api/projects/${id}/preview`,{cache:'no-store'}),data=await r.json();if(!r.ok)throw Error(data.error);
    if(data.publishedUrl){const url=new URL(data.publishedUrl);if(url.protocol!=='https:'||url.origin===window.location.origin)throw Error('Hébergement isolé requis.');if(active)setPublished(url.toString());return;}
    if(data.nativeAndroid)throw Error('Projet Android natif : utilisez le panneau Android pour tester son APK. Une WebView nécessite du contenu web.');
-   if(data.requiresBuild)throw Error('Compilez et publiez ce projet dans le terminal pour activer son aperçu WebView.');
+   if(data.requiresBuild)throw Error(data.diagnostics?.runtimeStatus==='unavailable'?'Worker de compilation/hébergement injoignable. Consultez le terminal.':data.diagnostics?.runtimeStatus==='not_configured'?'Le worker de compilation/hébergement doit être configuré pour afficher ce projet.':data.diagnostics?.latestJob?.status==='failed'?'La dernière tâche a échoué. Consultez ses erreurs dans le terminal puis recompilez et publiez.':'Ce projet nécessite une compilation ET une publication. Le mode public ne remplace pas ces étapes. Ouvrez le terminal et choisissez Compiler et publier.');
    files.current=new Map<string,any>(data.files.map((f:any)=>[f.path,f]));const entry=files.current.get('index.html')||files.current.get('public/index.html');
    if(!entry||entry.encoding==='base64')throw Error('Ce projet nécessite une compilation. Lancez le build dans le panneau Exécution puis ouvrez l’adresse publiée.');
    if(active)setHtml(build.current(entry));
   }catch(e:any){if(active)setError(e.message);}})();
   return()=>{active=false;window.removeEventListener('message',onMessage);};},[id]);
- if(error)return <div className="grid min-h-dvh place-items-center bg-zinc-950 p-6 text-center text-zinc-300"><p className="max-w-md">{error}</p></div>;
+ if(error)return <div className="grid min-h-dvh place-items-center bg-zinc-950 p-6 text-center text-zinc-300"><div className="max-w-md space-y-4"><p>{error}</p><button className="rounded border border-white/20 px-4 py-2" onClick={()=>window.location.reload()}>Réessayer</button></div></div>;
  if(published)return <iframe title="WebView du projet publié" src={published} sandbox="allow-scripts allow-same-origin allow-forms allow-popups" referrerPolicy="no-referrer" className="h-dvh w-full border-0 bg-white"/>;
  return html?<iframe ref={frame} title="Aperçu isolé du projet" srcDoc={html} sandbox="allow-scripts" referrerPolicy="no-referrer" className="h-dvh w-full border-0 bg-white"/>:<p className="p-6">Chargement de l’aperçu…</p>;
 }

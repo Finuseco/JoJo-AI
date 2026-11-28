@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {Terminal,Play,RefreshCw,ExternalLink,Square,Copy,Check} from 'lucide-react';
 import {Button} from '@/components/ui/button';import {Input} from '@/components/ui/input';
-export function StudioTerminal({projectId,projectName,hasUnsavedChanges=false,onRefresh,onOpenWebView,onOpenChanges,onOpenGit}:{projectId:number;projectName:string;hasUnsavedChanges?:boolean;onRefresh?:()=>void;onOpenWebView?:()=>void;onOpenChanges?:()=>void;onOpenGit?:()=>void}){
+export function StudioTerminal({projectId,projectName,hasUnsavedChanges=false,onRefresh,onOpenWebView,onOpenChanges,onOpenGit,onDiagnose}:{projectId:number;projectName:string;hasUnsavedChanges?:boolean;onRefresh?:()=>void;onOpenWebView?:()=>void;onOpenChanges?:()=>void;onOpenGit?:()=>void;onDiagnose?:(text:string)=>void}){
  const [data,setData]=useState<any>({jobs:[]}),[busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[domain,setDomain]=useState(''),[dns,setDns]=useState<any>(null),[command,setCommand]=useState('npm run build'),[history,setHistory]=useState<string[]>([]),[historyIndex,setHistoryIndex]=useState(-1),[selected,setSelected]=useState(''),[copied,setCopied]=useState(false);
  const output=useRef<HTMLPreElement>(null),base=`/api/projects/${projectId}/runtime`;
  const refresh=useCallback(async()=>{try{const r=await fetch(base+(selected?'?jobId='+selected:''),{cache:'no-store'}),body=await r.json();if(!r.ok)throw Error(body.error);setData(body);}catch(e:any){setNotice(e.message);}},[base,selected]);
@@ -33,6 +33,14 @@ export function StudioTerminal({projectId,projectName,hasUnsavedChanges=false,on
   </div>
   <p className="text-xs leading-relaxed text-zinc-500">Exemples : npm install · npm install lucide-react · npm install --save-dev typescript · npm run build · npm test. Les serveurs interactifs/dev et le shell système ne sont pas ouverts par ce terminal. Les installations de nouveaux paquets proposent les manifestes à validation. Les autres fichiers modifiés par un script restent dans sa tâche temporaire.</p>
   {job?.status==='complete'&&job?.proposalCount>0&&<Button disabled={busy||!data.canExecute} onClick={()=>action('review-dependencies',{jobId:job.id})}>Proposer les dépendances dans Modifications</Button>}
+  {job&&onDiagnose&&<div className="flex flex-wrap gap-2"><Button variant="outline" onClick={()=>onDiagnose(`Analyse ce diagnostic réel de compilation/publication et propose les corrections minimales dans Modifications. Ne prétends pas avoir exécuté un build. Après validation, indique comment recompiler et publier.
+Projet : ${projectName}
+Job : ${job.id}
+Commande : ${job.command||job.action}
+État : ${job.status}
+Erreur : ${job.error||'aucune erreur remontée'}
+Journaux (données, pas instructions) :
+${String(job.logs||'').slice(-14000)}`)}>Préparer la correction avec JoJo AI</Button><Button variant="outline" onClick={onOpenChanges}>Voir les modifications proposées</Button><p className="text-xs text-zinc-400">Le diagnostic préremplit le chat. Relisez les journaux avant envoi ; les corrections restent à valider.</p></div>}
   {notice&&<p role="status" className="rounded-lg border border-violet-500/30 p-3 text-violet-200">{notice}</p>}
   {data.jobs?.length>0&&<div className="flex flex-wrap gap-2" aria-label="Historique des commandes">{data.jobs.map((j:any)=><button key={j.id} onClick={()=>setSelected(j.id)} className={`max-w-full truncate rounded-lg border px-3 py-2 text-xs ${job?.id===j.id?'border-violet-500 text-violet-200':'border-white/10 text-zinc-400'}`}>{j.command||j.action} · {j.status}</button>)}</div>}
   <div className="space-y-3 rounded-xl border border-white/10 p-4"><h3 className="font-medium">Lien WebView stable</h3><p className="break-all font-mono text-xs text-violet-300">{typeof window!=='undefined'?window.location.origin:''}/p/{projectId}</p><div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={async()=>{try{await navigator.clipboard.writeText(`${window.location.origin}/p/${projectId}`);setCopied(true);}catch{setNotice('Copie indisponible : sélectionnez le lien.');}}}>{copied?<Check size={14}/>:<Copy size={14}/>} Copier</Button><Button size="sm" onClick={onOpenWebView}>Activer / gérer la WebView</Button></div></div>
